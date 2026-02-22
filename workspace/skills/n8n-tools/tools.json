@@ -1,0 +1,14 @@
+{
+  "tools": {
+    "bitcoin-price": {
+      "description": "Aktuellen Bitcoin-Preis in USD und EUR abfragen (CoinGecko API). Zeigt Preis, 24h-Aenderung und letztes Update.",
+      "webhook": "picoclaw/bitcoin-price",
+      "params": {},
+      "workflow_id": "wPiWWKEBHKrgeMnm",
+      "registered": "2026-02-21T12:56:55"
+    }
+  },
+  "meta": {
+    "updated": "2026-02-21T12:56:55"
+  }
+}

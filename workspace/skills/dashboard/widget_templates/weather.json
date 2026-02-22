@@ -1,0 +1,15 @@
+{
+  "type": "weather",
+  "title": "Wetter Wolfegg",
+  "data": {
+    "temp": "6°C",
+    "condition": "🌦",
+    "humidity": "87%",
+    "wind": "↗17km/h",
+    "location": "Wolfegg",
+    "forecast": "Bewölkt, Temp steigt"
+  },
+  "size": "medium",
+  "id": "weather",
+  "position": 7
+}

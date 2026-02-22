@@ -1,0 +1,34 @@
+{
+  "exported_at": "2026-02-21T19:52:31",
+  "count": 7,
+  "templates": [
+    {
+      "id": "clock",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/clock.json"
+    },
+    {
+      "id": "weather",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/weather.json"
+    },
+    {
+      "id": "tasks",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/tasks.json"
+    },
+    {
+      "id": "calendar",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/calendar.json"
+    },
+    {
+      "id": "status",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/status.json"
+    },
+    {
+      "id": "metrics",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/metrics.json"
+    },
+    {
+      "id": "todos",
+      "path": "/data/data/com.termux/files/home/.picoclaw/workspace/skills/dashboard/widget_templates/todos.json"
+    }
+  ]
+}

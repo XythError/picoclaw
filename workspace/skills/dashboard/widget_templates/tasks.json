@@ -1,0 +1,26 @@
+{
+  "type": "tasks",
+  "title": "Haushalt Heute",
+  "size": "large",
+  "data": {
+    "items": [
+      {
+        "text": "Zimmer putzen: Kueche",
+        "done": true
+      },
+      {
+        "text": "Waesche: waschen + aufraeumen",
+        "done": false
+      },
+      {
+        "text": "Spuelmaschine: ausraeumen + einraeumen",
+        "done": false
+      }
+    ],
+    "todos_count": 3,
+    "date": "2026-02-21",
+    "weekday": "Samstag"
+  },
+  "id": "tasks",
+  "position": 7
+}

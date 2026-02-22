@@ -1,0 +1,26 @@
+{
+  "type": "status",
+  "title": "System",
+  "data": {
+    "items": [
+      {
+        "label": "RAM",
+        "value": "1.1 GB / 1.8 GB",
+        "status": "ok"
+      },
+      {
+        "label": "Disk",
+        "value": "1.4 GB frei",
+        "status": "ok"
+      },
+      {
+        "label": "Uptime",
+        "value": "1W 6T",
+        "status": "ok"
+      }
+    ]
+  },
+  "size": "medium",
+  "id": "status",
+  "position": 7
+}

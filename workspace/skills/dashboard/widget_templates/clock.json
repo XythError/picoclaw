@@ -1,0 +1,8 @@
+{
+  "id": "clock",
+  "type": "clock",
+  "title": "Uhrzeit",
+  "data": {},
+  "position": 0,
+  "size": "small"
+}

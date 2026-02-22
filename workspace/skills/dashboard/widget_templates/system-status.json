@@ -1,0 +1,33 @@
+{
+  "type": "status",
+  "title": "System Status",
+  "size": "large",
+  "data": {
+    "items": [
+      {
+        "label": "Memory",
+        "value": "1245.9 MB / 1823.8 MB",
+        "percent": 68.3,
+        "status": "warning"
+      },
+      {
+        "label": "Disk",
+        "value": "1.4 GB / 2.9 GB",
+        "percent": 48,
+        "status": "ok"
+      },
+      {
+        "label": "Load Average",
+        "value": "1min: 0.45 | 5min: 0.52 | 15min: 0.48",
+        "status": "ok"
+      },
+      {
+        "label": "Uptime",
+        "value": "12 days, 3 hours",
+        "status": "ok"
+      }
+    ]
+  },
+  "id": "system-status",
+  "position": 8
+}
