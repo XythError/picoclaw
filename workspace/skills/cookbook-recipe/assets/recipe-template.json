@@ -1,0 +1,11 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Recipe",
+  "name": "TEMPLATE",
+  "description": "Lorem ipsum...",
+  "prepTime": "PT20M",
+  "cookTime": "PT1H",
+  "recipeYield": "4 Portionen",
+  "recipeIngredient": [],
+  "recipeInstructions": []
+}

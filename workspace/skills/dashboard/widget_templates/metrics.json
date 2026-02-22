@@ -1,0 +1,12 @@
+{
+  "type": "metric",
+  "title": "Uptime",
+  "size": "small",
+  "data": {
+    "value": "1W 6T",
+    "unit": "",
+    "trend": "stable"
+  },
+  "id": "metrics",
+  "position": 5
+}

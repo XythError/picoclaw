@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PicoClaw Dashboard 🦞</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --card-hover: #1c2129;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #e85d4a;
+            --accent-hover: #f0806e;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --info: #58a6ff;
+            --gold: #d4a574;
+            --radius: 12px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--card);
+            border-bottom: 2px solid var(--accent);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .header-left h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+
+        .agent-status {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(63, 185, 80, 0.3);
+        }
+
+        .agent-status.offline { background: rgba(248,81,73,0.15); color: var(--error); border-color: rgba(248,81,73,0.3); }
+        .agent-status.busy { background: rgba(210,153,34,0.15); color: var(--warning); border-color: rgba(210,153,34,0.3); }
+
+        .live-clock {
+            font-size: 1.6rem;
+            font-weight: 300;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-muted);
+        }
+
+        .live-clock .clock-date { font-size: 0.8rem; text-align: right; }
+
+        .agent-message {
+            max-width: 1200px;
+            margin: 1rem auto 0;
+            padding: 0 1.5rem;
+        }
+
+        .agent-message-inner {
+            background: linear-gradient(135deg, rgba(232,93,74,0.08), rgba(212,165,116,0.08));
+            border: 1px solid rgba(232,93,74,0.2);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .agent-message-inner .msg-icon { font-size: 1.3rem; }
+        .agent-message-inner .msg-text { color: var(--text); font-size: 0.95rem; }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .widget {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .widget:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .widget-large { grid-column: span 2; }
+
+        .widget-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .widget-header h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .widget-content { padding: 1rem; }
+
+        .widget-updated { animation: widgetPulse 0.6s ease; }
+
+        @keyframes widgetPulse {
+            0% { box-shadow: 0 0 0 0 rgba(232,93,74,0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(232,93,74,0); }
+            100% { box-shadow: 0 0 0 0 rgba(232,93,74,0); }
+        }
+
+        .clock-time { font-size: 2.5rem; font-weight: 200; font-variant-numeric: tabular-nums; text-align: center; }
+        .clock-date { font-size: 0.9rem; text-align: center; color: var(--text-muted); margin-top: 0.25rem; }
+
+        .weather-main { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+        .weather-condition { font-size: 2.5rem; }
+        .weather-temp { font-size: 2rem; font-weight: 300; }
+        .weather-location { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .weather-details { display: flex; gap: 1rem; font-size: 0.9rem; color: var(--text-muted); }
+        .weather-forecast { margin-top: 0.5rem; font-size: 0.9rem; color: var(--gold); }
+
+        .tasks-progress { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .task-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; font-size: 0.95rem; }
+        .task-done .task-text { text-decoration: line-through; color: var(--text-muted); }
+        .task-check { font-size: 1rem; }
+
+        .calendar-event { display: flex; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+        .calendar-event:last-child { border-bottom: none; }
+        .event-time { min-width: 50px; font-weight: 600; color: var(--accent); font-size: 0.9rem; }
+        .event-title { font-size: 0.95rem; }
+        .event-desc { font-size: 0.8rem; color: var(--text-muted); }
+        .calendar-empty { color: var(--text-muted); font-style: italic; }
+
+        .status-item { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        .status-item:last-child { border-bottom: none; }
+        .status-label { color: var(--text-muted); }
+        .status-value { font-weight: 500; }
+        .status-value.ok { color: var(--success); }
+        .status-value.warning { color: var(--warning); }
+        .status-value.error { color: var(--error); }
+
+        .metric-widget { text-align: center; }
+        .metric-value { font-size: 2.5rem; font-weight: 200; }
+        .metric-unit { font-size: 1rem; color: var(--text-muted); }
+        .metric-trend { font-size: 1.2rem; margin-top: 0.25rem; }
+        .metric-trend.up { color: var(--success); }
+        .metric-trend.down { color: var(--error); }
+        .metric-trend.stable { color: var(--text-muted); }
+
+        .text-widget { font-size: 0.95rem; white-space: pre-wrap; line-height: 1.6; }
+        .list-item { padding: 0.3rem 0; font-size: 0.95rem; }
+
+        .buttons-section { margin-top: 1rem; }
+        .buttons-section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+
+        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
+
+        .action-button {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text);
+            font-family: inherit;
+        }
+
+        .action-button:hover { border-color: var(--accent); background: var(--card-hover); transform: translateY(-2px); }
+        .action-button:active { transform: translateY(0); }
+
+        .action-button .btn-icon { font-size: 1.8rem; }
+        .action-button .btn-label { font-size: 0.85rem; font-weight: 500; }
+
+        .action-button.loading { opacity: 0.6; pointer-events: none; }
+        .action-button.loading .btn-icon::after { content: " ⏳"; }
+
+        .action-button.success { border-color: var(--success); background: rgba(63,185,80,0.1); }
+        .action-button.error-state { border-color: var(--error); background: rgba(248,81,73,0.1); }
+
+        footer {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+
+        .refresh-indicator { display: flex; align-items: center; gap: 0.5rem; }
+        .refresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: blink 2s infinite; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        #notifications {
+            position: fixed;
+            top: 5rem;
+            right: 1rem;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: 400px;
+        }
+
+        .notification {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-success { border-left: 3px solid var(--success); }
+        .notification-warning { border-left: 3px solid var(--warning); }
+        .notification-error { border-left: 3px solid var(--error); }
+        .notification-info { border-left: 3px solid var(--info); }
+
+        .notif-message { font-size: 0.9rem; flex: 1; }
+        .notif-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0.25rem; margin-left: 0.5rem; }
+
+        .fade-out { animation: fadeOut 0.5s ease forwards; }
+
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(50px); } }
+
+        @keyframes scaleIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            header { flex-direction: column; gap: 0.5rem; }
+            .live-clock { text-align: center; }
+            .widget-large { grid-column: span 1; }
+            .widget-grid { grid-template-columns: 1fr; }
+            .buttons-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <h1>🦞 PicoClaw</h1>
+            <span class="agent-status" id="agent-status">● Online</span>
+        </div>
+        <div class="header-right">
+            <div class="live-clock" id="live-clock"></div>
+        </div>
+    </header>
+
+    <div class="agent-message" id="agent-message"></div>
+
+    <main>
+        <div class="widget-grid" id="widget-grid"></div>
+        <div id="buttons-section"></div>
+    </main>
+
+    <footer>
+        <div class="refresh-indicator">
+            <div class="refresh-dot"></div>
+            <span id="last-update">Lade...</span>
+        </div>
+        <span>🦞 PicoClaw Dashboard v1.0</span>
+    </footer>
+
+    <div id="notifications"></div>
+
+    <script>
+        let prevData = null;
+        let prevHash = '';
+        let refreshInterval = 15;
+        let refreshCounter = 0;
+        const shownNotifications = new Set();
+
+        function updateClock() {
+            const now = new Date();
+            const el = document.getElementById('live-clock');
+            const time = now.toLocaleTimeString('de-DE');
+            const date = now.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+            el.innerHTML = `<div>${time}</div><div class="clock-date">${date}</div>`;
+
+            document.querySelectorAll('.clock-widget').forEach(cw => {
+                cw.querySelector('.clock-time').textContent = time;
+                cw.querySelector('.clock-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const renderers = {
+            clock: w => `<div class="clock-widget"><div class="clock-time">--:--:--</div><div class="clock-date">Laden...</div></div>`,
+
+            weather: w => {
+                const d = w.data || {};
+                return `<div class="weather-main">
+                    <span class="weather-condition">${d.condition||'☀️'}</span>
+                    <span class="weather-temp">${d.temp||'--'}</span>
+                </div>
+                ${d.location ? `<div class="weather-location">📍 ${d.location}</div>` : ''}
+                <div class="weather-details">
+                    <span>💧 ${d.humidity||'--'}</span>
+                    <span>💨 ${d.wind||'--'}</span>
+                </div>
+                ${d.forecast ? `<div class="weather-forecast">${d.forecast}</div>` : ''}`;
+            },
+
+            tasks: w => {
+                const items = (w.data||{}).items || [];
+                const done = items.filter(i => i.done).length;
+                return `<div class="tasks-progress">${done}/${items.length} erledigt</div>
+                <div>${items.map((i, idx) => {
+                    const taskId = 'task-' + Math.random().toString(36).substr(2, 9);
+                    const taskText = esc(i.text);
+                    return `<div class="task-item ${i.done?'task-done':''}" id="${taskId}" style="cursor: pointer; transition: all 0.2s;" onclick="toggleTaskItem('${taskId}', '${i.text.replace(/'/g, "\\'")}', ${i.done})" title="Klick zum abhaken">
+                    <span class="task-check" style="font-size: 1.2rem; transition: all 0.2s;">${i.done?'✅':'⬜'}</span>
+                    <span class="task-text">${taskText}</span>
+                </div>`;
+                }).join('')}</div>`;
+            },
+
+            calendar: w => {
+                const events = (w.data||{}).events || [];
+                if (!events.length) return '<div class="calendar-empty">Keine Termine</div>';
+                return events.map(ev => `<div class="calendar-event">
+                    <div class="event-time" style="flex-direction: column; display: flex; align-items: flex-start;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">${esc(ev.date||'')}</span>
+                        <span style="font-weight: 600; color: var(--accent);">${esc(ev.time||'')}</span>
+                    </div>
+                    <div><div class="event-title">${esc(ev.title)}</div>
+                    ${ev.description ? `<div class="event-desc">${esc(ev.description)}</div>` : ''}</div>
+                </div>`).join('');
+            },
+
+            status: w => {
+                const items = (w.data||{}).items || [];
+                return items.map(s => `<div class="status-item">
+                    <span class="status-label">${esc(s.label)}</span>
+                    <span class="status-value ${s.status||''}">${esc(s.value)}</span>
+                </div>`).join('');
+            },
+
+            metric: w => {
+                const d = w.data || {};
+                const trendIcon = d.trend === 'up' ? '↑' : d.trend === 'down' ? '↓' : '→';
+                return `<div class="metric-widget">
+                    <div class="metric-value">${esc(String(d.value||'--'))}</div>
+                    <div class="metric-unit">${esc(d.unit||'')}</div>
+                    ${d.trend ? `<div class="metric-trend ${d.trend}">${trendIcon}</div>` : ''}
+                </div>`;
+            },
+
+            text: w => `<div class="text-widget">${esc((w.data||{}).content||'')}</div>`,
+
+            list: w => {
+                const items = (w.data||{}).items || [];
+                return items.map(i => {
+                    const text = typeof i === 'string' ? i : (i.text || i.title || i.name || JSON.stringify(i));
+                    return `<div class="list-item">• ${esc(text)}</div>`;
+                }).join('');
+            },
+
+            todos: w => {
+                const items = (w.data||{}).items || [];
+                if (!items.length) return '<div style="color: var(--text-muted); font-style: italic;">Keine offenen TODOs 🎉</div>';
+                return `<div>${items.map(i => {
+                    const todoId = 'todo-' + Math.random().toString(36).substr(2, 9);
+                    const todoText = typeof i === 'string' ? i : (i.text || i.title || i.name || '');
+                    const deadline = typeof i === 'object' ? (i.deadline || i.bis || '') : '';
+                    return `<div class="todo-item" id="${todoId}" style="padding: 0.6rem; margin-bottom: 0.5rem; background: rgba(232,93,74,0.08); border-left: 3px solid var(--accent); border-radius: 4px; cursor: pointer; transition: all 0.2s;" onclick="markTodoDone('${todoId}', '${todoText.replace(/'/g, "\\'")}')" title="Klick zum abhaken">
+                        <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                            <span style="font-size: 1.2rem; margin-top: 0.1rem;">☐</span>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.95rem; font-weight: 500; color: var(--text);">${esc(todoText)}</div>
+                                ${deadline ? `<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">📅 ${esc(deadline)}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}</div>`;
+            },
+
+            image: w => {
+                const d = w.data || {};
+                const url = d.url || '';
+                const alt = d.alt || w.title || 'Bild';
+                const caption = d.caption || '';
+                if (!url) {
+                    return '<div style="color: var(--text-muted); font-style: italic;">Kein Bild gesetzt</div>';
+                }
+                return `<div style="display:flex; flex-direction:column; gap:0.6rem;">
+                    <img src="${esc(url)}" alt="${esc(alt)}" style="width:100%; height:auto; border-radius:8px; border:1px solid var(--border); object-fit:contain; max-height:320px;" />
+                    ${caption ? `<div style="font-size:0.85rem; color:var(--text-muted);">${esc(caption)}</div>` : ''}
+                </div>`;
+            },
+
+            video: w => {
+                const d = w.data || {};
+                const url = d.url || '';
+                const poster = d.poster || '';
+                const caption = d.caption || '';
+                if (!url) {
+                    return '<div style="color: var(--text-muted); font-style: italic;">Kein Video gesetzt</div>';
+                }
+                return `<div style="display:flex; flex-direction:column; gap:0.6rem;">
+                    <video controls playsinline preload="metadata" ${poster ? `poster="${esc(poster)}"` : ''} style="width:100%; border-radius:8px; border:1px solid var(--border); max-height:360px; background:#000;">
+                        <source src="${esc(url)}" />
+                        Dein Browser unterstützt dieses Video-Format nicht.
+                    </video>
+                    ${caption ? `<div style="font-size:0.85rem; color:var(--text-muted);">${esc(caption)}</div>` : ''}
+                </div>`;
+            },
+
+            terminal: w => {
+                const d = w.data || {};
+                const output = d.output || 'Bereit für Befehle...';
+                return `<div style="font-family: 'Courier New', monospace; font-size: 0.85rem;">
+                    <div style="background: #0a0e27; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; max-height: 200px; overflow-y: auto; border: 1px solid var(--border); color: #00ff00; white-space: pre-wrap; word-break: break-all; line-height: 1.4;" id="terminal-output-${w.id}">${esc(output)}</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" placeholder="Befehl eingeben..." style="flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem; color: var(--text); font-family: 'Courier New', monospace;" class="terminal-input" data-widget-id="${w.id}" />
+                        <button style="background: var(--accent); border: none; border-radius: 4px; padding: 0.5rem 1rem; color: white; cursor: pointer; font-weight: 500;" class="terminal-exec" data-widget-id="${w.id}">⚡ Exec</button>
+                    </div>
+                </div>`;
+            },
+
+            recipe: w => {
+                const d = w.data || {};
+                const ingredients = d.ingredients || [];
+                const steps = d.steps || [];
+                const nutrition = d.nutrition || {};
+                
+                return `<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Rezept-Header mit Bild -->
+                    <div style="text-align: center;">
+                        ${d.image ? `<img src="${d.image}" alt="${esc(d.name)}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 1rem; max-height: 250px; object-fit: cover;" />` : ''}
+                        <h2 style="font-size: 1.4rem; margin: 0.5rem 0; color: var(--accent);">${esc(d.name||'Rezept')}</h2>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0.5rem 0;">${esc(d.description||'')}</p>
+                    </div>
+
+                    <!-- Rezept-Info: Zeit, Portionen, Kategorie -->
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding: 0.75rem; background: rgba(232,93,74,0.08); border-radius: 6px; border: 1px solid rgba(232,93,74,0.15);">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">⏱ Vorbereitung</div>
+                            <div style="font-weight: 600; color: var(--accent);">${esc(d.prepTime||'--')}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">🍳 Zubereitung</div>
+                            <div style="font-weight: 600; color: var(--accent);">${esc(d.cookTime||'--')}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">👥 Portionen</div>
+                            <div style="font-weight: 600; color: var(--accent);">${esc(d.yield||'--')}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">🏷 Kategorie</div>
+                            <div style="font-weight: 600; color: var(--accent);">${esc(d.category||'--')}</div>
+                        </div>
+                    </div>
+
+                    <!-- Zutaten -->
+                    <div>
+                        <h3 style="font-size: 1rem; margin: 0 0 0.75rem 0; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem;">📋 Zutaten</h3>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            ${ingredients.map(ing => `<li style="padding: 0.4rem 0; font-size: 0.9rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="color: var(--accent);">•</span> ${esc(ing)}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <!-- Zubereitung -->
+                    <div>
+                        <h3 style="font-size: 1rem; margin: 0 0 0.75rem 0; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem;">👨‍🍳 Zubereitung</h3>
+                        <ol style="list-style: none; padding: 0; margin: 0; counter-reset: step-counter;">
+                            ${steps.map((step, idx) => `<li style="padding: 0.75rem; margin-bottom: 0.5rem; background: rgba(232,93,74,0.05); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 0.9rem; line-height: 1.5;">
+                                <strong style="color: var(--accent);">Schritt ${idx + 1}:</strong> ${esc(step)}
+                            </li>`).join('')}
+                        </ol>
+                    </div>
+
+                    <!-- Nährwerte -->
+                    ${nutrition && Object.keys(nutrition).length > 0 ? `<div style="padding: 0.75rem; background: rgba(212,165,116,0.08); border: 1px solid rgba(212,165,116,0.15); border-radius: 6px;">
+                        <h4 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: var(--gold);">🥗 Nährwerte pro Portion</h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                            ${nutrition.calories ? `<div>🔥 <strong>${esc(nutrition.calories)}</strong></div>` : ''}
+                            ${nutrition.protein ? `<div>💪 <strong>${esc(nutrition.protein)}</strong> Eiweiß</div>` : ''}
+                            ${nutrition.carbs ? `<div>🌾 <strong>${esc(nutrition.carbs)}</strong> Kohlenhydrate</div>` : ''}
+                            ${nutrition.fat ? `<div>🧈 <strong>${esc(nutrition.fat)}</strong> Fett</div>` : ''}
+                        </div>
+                    </div>` : ''}
+                </div>`;
+            },
+
+            game: w => {
+                const d = w.data || {};
+                if (d.gameType !== 'memory') return '<div>Unbekanntes Spiel</div>';
+                
+                const cards = d.cards || [];
+                const score = d.score || 0;
+                const moves = d.moves || 0;
+                const pairs = d.pairs || 0;
+                const totalPairs = d.totalPairs || 6;
+                
+                return `<div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Score-Bar -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; padding: 0.75rem; background: rgba(232,93,74,0.08); border-radius: 6px; border: 1px solid rgba(232,93,74,0.15);">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">🎯 Score</div>
+                            <div style="font-weight: 600; color: var(--success); font-size: 1.3rem;">${score}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">🔄 Züge</div>
+                            <div style="font-weight: 600; color: var(--info); font-size: 1.3rem;">${moves}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">✨ Paare</div>
+                            <div style="font-weight: 600; color: var(--accent); font-size: 1.3rem;">${pairs}/${totalPairs}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Spielfeld -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; aspect-ratio: 1;">
+                        ${cards.map((card, idx) => `
+                            <button class="memory-card ${card.matched ? 'matched' : ''} ${card.revealed ? 'revealed' : ''}" 
+                                    data-card-id="${idx}" data-emoji="${card.emoji}" 
+                                    style="
+                                        background: ${card.matched ? 'rgba(63,185,80,0.2)' : card.revealed ? 'rgba(88,166,255,0.2)' : 'var(--card)'};
+                                        border: 2px solid ${card.matched ? 'var(--success)' : card.revealed ? 'var(--info)' : 'var(--border)'};
+                                        border-radius: 8px;
+                                        font-size: 2rem;
+                                        cursor: ${card.matched ? 'default' : 'pointer'};
+                                        transition: all 0.3s ease;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        opacity: ${card.matched ? '0.7' : '1'};
+                                    "
+                                    onclick="playMemoryCard(this, ${idx})">
+                                ${card.revealed || card.matched ? card.emoji : '?'}
+                            </button>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button onclick="resetMemoryGame()" style="background: var(--accent); border: none; border-radius: 6px; padding: 0.5rem 1.5rem; color: white; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                            🔄 Neu starten
+                        </button>
+                        <button onclick="shuffleMemoryCards()" style="background: var(--info); border: none; border-radius: 6px; padding: 0.5rem 1.5rem; color: white; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                            🔀 Mischen
+                        </button>
+                    </div>
+                </div>`;
+            }
+        };
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function renderWidget(w) {
+            const r = renderers[w.type] || renderers.text;
+            const sizeClass = w.size === 'large' ? 'widget-large' : '';
+            return `<div class="widget ${sizeClass}" id="widget-${w.id}" data-hash="${JSON.stringify(w.data).length}">
+                <div class="widget-header"><h3>${esc(w.title)}</h3></div>
+                <div class="widget-content">${r(w)}</div>
+            </div>`;
+        }
+
+        function renderButtons(buttons) {
+            if (!buttons || !buttons.length) return '';
+            return `<div class="buttons-section">
+                <h2>Quick Actions</h2>
+                <div class="buttons-grid">${buttons.map(b => `
+                    <button class="action-button" data-action="${esc(b.action)}" data-id="${esc(b.id)}" data-label="${esc(b.label)}" title="${esc(b.description||b.label)}">
+                        <span class="btn-icon">${b.icon||'🔘'}</span>
+                        <span class="btn-label">${esc(b.label)}</span>
+                    </button>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        document.addEventListener('click', async e => {
+            const btn = e.target.closest('.action-button');
+            if (btn && !btn.classList.contains('loading')) {
+                btn.classList.add('loading');
+                try {
+                    const resp = await fetch('/api/action', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            action: btn.dataset.action,
+                            button_id: btn.dataset.id,
+                            button_label: btn.dataset.label
+                        })
+                    });
+                    await resp.json();
+                    btn.classList.remove('loading');
+                    btn.classList.add('success');
+                    setTimeout(() => { btn.classList.remove('success'); }, 2500);
+                } catch {
+                    btn.classList.remove('loading');
+                    btn.classList.add('error-state');
+                    setTimeout(() => { btn.classList.remove('error-state'); }, 2500);
+                }
+                return;
+            }
+
+            const tbtn = e.target.closest('.terminal-exec');
+            if (!tbtn) return;
+
+            const widgetId = tbtn.dataset.widgetId;
+            const input = document.querySelector(`.terminal-input[data-widget-id="${widgetId}"]`);
+            const command = input.value.trim();
+
+            if (!command) return;
+
+            tbtn.disabled = true;
+            tbtn.textContent = '⏳ ...';
+
+            try {
+                const resp = await fetch('/api/exec', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ command, widget_id: widgetId })
+                });
+                const result = await resp.json();
+                
+                const output = document.getElementById(`terminal-output-${widgetId}`);
+                if (output) {
+                    output.textContent = result.output || 'Keine Ausgabe';
+                    output.scrollTop = output.scrollHeight;
+                }
+                input.value = '';
+            } catch (err) {
+                const output = document.getElementById(`terminal-output-${widgetId}`);
+                if (output) output.textContent = `Fehler: ${err.message}`;
+            } finally {
+                tbtn.disabled = false;
+                tbtn.textContent = '⚡ Exec';
+            }
+        });
+
+        document.addEventListener('keypress', e => {
+            if (e.key === 'Enter' && e.target.classList.contains('terminal-input')) {
+                e.target.closest('.widget').querySelector('.terminal-exec').click();
+            }
+        });
+
+        function showNotifications(notifications) {
+            const container = document.getElementById('notifications');
+            if (!notifications) return;
+
+            notifications.forEach(n => {
+                if (shownNotifications.has(n.id)) return;
+                shownNotifications.add(n.id);
+
+                const el = document.createElement('div');
+                el.className = `notification notification-${n.level||'info'}`;
+                el.innerHTML = `<span class="notif-message">${esc(n.message)}</span>
+                    <button class="notif-close" onclick="dismissNotif('${n.id}',this)">✕</button>`;
+                container.appendChild(el);
+
+                setTimeout(() => {
+                    el.classList.add('fade-out');
+                    setTimeout(() => el.remove(), 500);
+                }, 15000);
+            });
+        }
+
+        async function dismissNotif(id, btn) {
+            btn.closest('.notification').remove();
+            try { await fetch('/api/dismiss', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }); } catch {}
+        }
+
+        function updateAgentStatus(meta) {
+            const el = document.getElementById('agent-status');
+            const s = meta.agent_status || 'online';
+            const labels = { online: '● Online', offline: '○ Offline', busy: '◉ Beschäftigt' };
+            el.textContent = labels[s] || s;
+            el.className = 'agent-status' + (s !== 'online' ? ` ${s}` : '');
+
+            const msgEl = document.getElementById('agent-message');
+            if (meta.agent_message) {
+                msgEl.innerHTML = `<div class="agent-message-inner">
+                    <span class="msg-icon">🦞</span>
+                    <span class="msg-text">${esc(meta.agent_message)}</span>
+                </div>`;
+            } else {
+                msgEl.innerHTML = '';
+            }
+        }
+
+        async function refresh() {
+            try {
+                const resp = await fetch('/data.json?t=' + Date.now());
+                const data = await resp.json();
+                const hash = JSON.stringify(data);
+
+                if (hash !== prevHash) {
+                    const grid = document.getElementById('widget-grid');
+                    const sorted = [...(data.widgets||[])].sort((a,b) => (a.position||0) - (b.position||0));
+                    // Preserve game widgets during refresh (don't reset game state)
+                    const existingGame = grid.querySelector('.memory-card') ? grid.querySelector('[id^="widget-game"]') : null;
+                    const gameHtml = existingGame ? existingGame.outerHTML : null;
+                    const gameId = existingGame ? existingGame.id : null;
+                    grid.innerHTML = sorted.map(w => {
+                        if (w.type === 'game' && gameHtml) return gameHtml;
+                        return renderWidget(w);
+                    }).join('');
+
+                    document.getElementById('buttons-section').innerHTML = renderButtons(data.buttons);
+
+                    updateAgentStatus(data.meta || {});
+
+                    showNotifications(data.notifications || []);
+
+                    if (prevHash) {
+                        const prevWidgets = prevData ? prevData.widgets || [] : [];
+                        sorted.forEach(w => {
+                            const prev = prevWidgets.find(p => p.id === w.id);
+                            if (!prev || JSON.stringify(prev.data) !== JSON.stringify(w.data)) {
+                                const el = document.getElementById('widget-' + w.id);
+                                if (el) el.classList.add('widget-updated');
+                            }
+                        });
+                    }
+
+                    prevData = data;
+                    prevHash = hash;
+                    refreshInterval = (data.meta || {}).refresh_interval || 15;
+
+                    updateClock();
+                }
+
+                const updated = (data.meta || {}).updated || '';
+                const ago = timeSince(updated);
+                document.getElementById('last-update').textContent = `Aktualisiert ${ago}`;
+
+            } catch (err) {
+                document.getElementById('last-update').textContent = '⚠️ Verbindung verloren';
+            }
+        }
+
+        function timeSince(isoStr) {
+            if (!isoStr) return '';
+            const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+            if (diff < 5) return 'gerade eben';
+            if (diff < 60) return `vor ${diff}s`;
+            if (diff < 3600) return `vor ${Math.floor(diff/60)}min`;
+            if (diff < 86400) return `vor ${Math.floor(diff/3600)}h`;
+            return `vor ${Math.floor(diff/86400)}d`;
+        }
+
+        refresh();
+        setInterval(refresh, 15000);
+
+        // ===== MEMORY GAME FUNCTIONS =====
+        let memoryState = {
+            firstCard: null,
+            secondCard: null,
+            isLocked: false,
+            moves: 0,
+            score: 0,
+            pairs: 0
+        };
+
+        // ===== TASK TOGGLE FUNCTION =====
+        async function toggleTaskItem(elementId, taskText, isDone) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            el.style.opacity = '0.5';
+            el.style.pointerEvents = 'none';
+
+            try {
+                const resp = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'haushalt-task-done',
+                        task_text: taskText,
+                        task_was_done: isDone
+                    })
+                });
+                const result = await resp.json();
+                
+                // Visuelle Bestätigung
+                if (result.status === 'queued' || result.status === 'error') {
+                    el.style.opacity = '1';
+                    el.style.pointerEvents = 'auto';
+                    
+                    // Animiere die Änderung
+                    const check = el.querySelector('.task-check');
+                    const text = el.querySelector('.task-text');
+                    
+                    if (!isDone) {
+                        // Markiere als erledigt
+                        check.textContent = '✅';
+                        el.classList.add('task-done');
+                        check.style.animation = 'scaleIn 0.3s ease';
+                    } else {
+                        // Markiere als nicht erledigt
+                        check.textContent = '⬜';
+                        el.classList.remove('task-done');
+                    }
+                    
+                    // Zeige Benachrichtigung
+                    if (result.message) {
+                        showNotifications([{
+                            id: 'task-' + Date.now(),
+                            message: result.message,
+                            level: 'success'
+                        }]);
+                    }
+                }
+            } catch (err) {
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+                console.error('Task-Toggle Fehler:', err);
+                showNotifications([{
+                    id: 'task-err-' + Date.now(),
+                    message: 'Fehler beim Abhaken: ' + err.message,
+                    level: 'error'
+                }]);
+            }
+        }
+
+        async function markTodoDone(elementId, todoText) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            el.style.opacity = '0.5';
+            el.style.pointerEvents = 'none';
+
+            try {
+                const resp = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'haushalt-todo-done',
+                        todo_text: todoText
+                    })
+                });
+                const result = await resp.json();
+
+                if (result.status === 'queued') {
+                    el.style.transition = 'all 0.3s ease';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateX(-10px)';
+                    setTimeout(() => {
+                        el.remove();
+                    }, 300);
+
+                    showNotifications([{
+                        id: 'todo-' + Date.now(),
+                        message: result.message || `✅ ${todoText} erledigt`,
+                        level: 'success'
+                    }]);
+                } else {
+                    el.style.opacity = '1';
+                    el.style.pointerEvents = 'auto';
+                    showNotifications([{
+                        id: 'todo-err-' + Date.now(),
+                        message: result.message || 'Fehler beim TODO-Abhaken',
+                        level: 'error'
+                    }]);
+                }
+            } catch (err) {
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+                showNotifications([{
+                    id: 'todo-err-' + Date.now(),
+                    message: 'Fehler: ' + err.message,
+                    level: 'error'
+                }]);
+            }
+        }
+
+        function playMemoryCard(btn, cardId) {
+            if (memoryState.isLocked) return;
+            if (btn.classList.contains('matched') || btn.classList.contains('revealed')) return;
+
+            // Reveal card using emoji from data attribute
+            const emoji = btn.getAttribute('data-emoji');
+            if (!emoji) return;
+            btn.classList.add('revealed');
+            btn.textContent = emoji;
+            btn.style.background = 'rgba(88,166,255,0.2)';
+            btn.style.borderColor = 'var(--info)';
+
+            if (!memoryState.firstCard) {
+                memoryState.firstCard = { btn, cardId, emoji };
+                return;
+            }
+
+            memoryState.secondCard = { btn, cardId, emoji };
+            memoryState.isLocked = true;
+            memoryState.moves++;
+
+            const first = memoryState.firstCard;
+            const second = memoryState.secondCard;
+
+            setTimeout(() => {
+                if (first.emoji === second.emoji) {
+                    // Match found
+                    first.btn.classList.add('matched');
+                    second.btn.classList.add('matched');
+                    first.btn.style.background = 'rgba(63,185,80,0.2)';
+                    second.btn.style.background = 'rgba(63,185,80,0.2)';
+                    first.btn.style.borderColor = 'var(--success)';
+                    second.btn.style.borderColor = 'var(--success)';
+                    first.btn.style.opacity = '0.7';
+                    second.btn.style.opacity = '0.7';
+                    memoryState.score += 10;
+                    memoryState.pairs++;
+
+                    const totalPairs = document.querySelectorAll('.memory-card').length / 2;
+                    if (memoryState.pairs >= totalPairs) {
+                        setTimeout(() => alert('Gewonnen! Score: ' + memoryState.score + ' / Zuege: ' + memoryState.moves), 300);
+                    }
+                } else {
+                    // No match - flip back
+                    first.btn.classList.remove('revealed');
+                    second.btn.classList.remove('revealed');
+                    first.btn.textContent = '?';
+                    second.btn.textContent = '?';
+                    first.btn.style.background = 'var(--card)';
+                    second.btn.style.background = 'var(--card)';
+                    first.btn.style.borderColor = 'var(--border)';
+                    second.btn.style.borderColor = 'var(--border)';
+                }
+
+                memoryState.firstCard = null;
+                memoryState.secondCard = null;
+                memoryState.isLocked = false;
+                updateMemoryGameDisplay();
+            }, 800);
+        }
+
+
+        function resetMemoryGame() {
+            memoryState = { firstCard: null, secondCard: null, isLocked: false, moves: 0, score: 0, pairs: 0 };
+            document.querySelectorAll('.memory-card').forEach(card => {
+                card.classList.remove('revealed', 'matched');
+                card.textContent = '?';
+                card.style.background = 'var(--card)';
+                card.style.borderColor = 'var(--border)';
+                card.style.opacity = '1';
+                card.style.cursor = 'pointer';
+            });
+            updateMemoryGameDisplay();
+        }
+
+        function shuffleMemoryCards() {
+            const cards = Array.from(document.querySelectorAll('.memory-card'));
+            const emojis = cards.map(c => c.getAttribute('data-emoji'));
+            
+            // Fisher-Yates shuffle
+            for (let i = emojis.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [emojis[i], emojis[j]] = [emojis[j], emojis[i]];
+            }
+
+            // Reassign emojis to cards
+            cards.forEach((card, idx) => {
+                card.setAttribute('data-emoji', emojis[idx]);
+            });
+
+            resetMemoryGame();
+        }
+
+        function updateMemoryGameDisplay() {
+            // Update score bar in-place without re-rendering
+            const gameWidget = document.getElementById('widget-game-memory');
+            if (!gameWidget) return;
+            const statDivs = gameWidget.querySelectorAll('[style*="text-align: center"]');
+            if (statDivs.length >= 3) {
+                const vals = statDivs[0].querySelectorAll('div');
+                if (vals.length >= 2) vals[1].textContent = memoryState.score;
+                const vals2 = statDivs[1].querySelectorAll('div');
+                if (vals2.length >= 2) vals2[1].textContent = memoryState.moves;
+                const vals3 = statDivs[2].querySelectorAll('div');
+                const totalPairs = document.querySelectorAll('.memory-card').length / 2;
+                if (vals3.length >= 2) vals3[1].textContent = memoryState.pairs + '/' + totalPairs;
+            }
+        }
+    </script>
+</body>
+</html>

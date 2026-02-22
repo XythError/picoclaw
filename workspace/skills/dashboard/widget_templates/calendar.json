@@ -1,0 +1,29 @@
+{
+  "type": "calendar",
+  "title": "Termine",
+  "size": "large",
+  "data": {
+    "events": [
+      {
+        "date": "So 22.02.",
+        "time": "10:00-12:00",
+        "title": "Franzi und Luca kommen",
+        "description": "picoclaw-1771618077-14548.ics"
+      },
+      {
+        "date": "Di 03.03.",
+        "time": "00:00-23:59",
+        "title": "Luca Geburtstag",
+        "description": "picoclaw-1771697871-15088.ics"
+      },
+      {
+        "date": "Di 03.03.",
+        "time": "09:30-10:30",
+        "title": "Führerschein Theorieprüfung",
+        "description": "picoclaw-1771583848-5492.ics"
+      }
+    ]
+  },
+  "id": "calendar",
+  "position": 7
+}

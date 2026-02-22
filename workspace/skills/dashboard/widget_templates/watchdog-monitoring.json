@@ -1,0 +1,31 @@
+{
+  "type": "status",
+  "title": "Dashboard Watchdog",
+  "size": "medium",
+  "data": {
+    "items": [
+      {
+        "label": "Server Status",
+        "value": "🟢 ONLINE",
+        "status": "ok"
+      },
+      {
+        "label": "Watchdog",
+        "value": "✅ Aktiv",
+        "status": "ok"
+      },
+      {
+        "label": "Cron-Job",
+        "value": "*/2 * * * *",
+        "status": "ok"
+      },
+      {
+        "label": "Restarts (24h)",
+        "value": "0",
+        "status": "ok"
+      }
+    ]
+  },
+  "id": "watchdog-status",
+  "position": 7
+}

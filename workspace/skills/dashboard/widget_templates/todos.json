@@ -1,0 +1,16 @@
+{
+  "type": "todos",
+  "title": "Offene TODOs",
+  "size": "medium",
+  "data": {
+    "items": [
+      {
+        "text": "Wichtiges TODO mit Deadline",
+        "deadline": "2026-03-01"
+      },
+      {
+        "text": "TODO ohne Deadline"
+      }
+    ]
+  }
+}

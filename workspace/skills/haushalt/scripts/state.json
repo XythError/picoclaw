@@ -1,0 +1,103 @@
+{
+  "rotations": {
+    "zimmer": {
+      "label": "Zimmer putzen",
+      "items": [
+        "Buero",
+        "Wohnzimmer",
+        "Kueche",
+        "Esszimmer",
+        "Kinderzimmer",
+        "Schlafzimmer"
+      ],
+      "index": 3,
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "nebenraum": {
+      "label": "Nebenraum",
+      "items": [
+        "Bad",
+        "Klo",
+        "Garderobe"
+      ],
+      "index": 1,
+      "days": [
+        0,
+        2,
+        4
+      ]
+    }
+  },
+  "fixed_tasks": [
+    {
+      "name": "Waesche",
+      "desc": "waschen + aufraeumen",
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "name": "Spuelmaschine",
+      "desc": "ausraeumen + einraeumen",
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    }
+  ],
+  "completed": {
+    "2026-02-20": [
+      "Spuelmaschine",
+      "Nebenraum",
+      "Waesche",
+      "Zimmer putzen"
+    ],
+    "2026-02-21": [
+      "Zimmer putzen",
+      "Waesche",
+      "Spuelmaschine"
+    ]
+  },
+  "last_advance": "2026-02-22",
+  "todos": [
+    {
+      "text": "Augenarzt Termin für Mika ausmachen",
+      "created": "2026-02-20",
+      "deadline": "2026-02-28"
+    },
+    {
+      "text": "Zahnarzt Termin ausmachen",
+      "created": "2026-02-20",
+      "deadline": "2026-02-28"
+    },
+    {
+      "text": "Haftpflichtversicherung abschliessen",
+      "created": "2026-02-20",
+      "deadline": "2026-02-28"
+    },
+    {
+      "text": "Fahrschulprüfung lernen (App-Lernweg)",
+      "created": "2026-02-21",
+      "deadline": "2026-03-03"
+    }
+  ]
+}
