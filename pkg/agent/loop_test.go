@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -630,4 +631,122 @@ func TestAgentLoop_ContextExhaustionRetry(t *testing.T) {
 	if len(finalHistory) >= 8 {
 		t.Errorf("Expected history to be compressed (len < 8), got %d", len(finalHistory))
 	}
+}
+
+// TestSilentReplyToken_SuppressesOutbound verifies that the SilentReplyToken response
+// is treated as empty and does not produce a user-visible message.
+func TestSilentReplyToken_SuppressesOutbound(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	// Provider responds with the silent reply token
+	provider := &simpleMockProvider{response: SilentReplyToken}
+	al := NewAgentLoop(cfg, msgBus, provider)
+
+	response, err := al.ProcessDirect(context.Background(), "hello", "test-silent-session")
+	if err != nil {
+		t.Fatalf("ProcessDirect failed: %v", err)
+	}
+
+	// The silent token should have been suppressed; the default response is used instead
+	if response == SilentReplyToken {
+		t.Errorf("SilentReplyToken should have been suppressed, got it as response")
+	}
+}
+
+// TestSilentReplyToken_Constant verifies SilentReplyToken has the expected value.
+func TestSilentReplyToken_Constant(t *testing.T) {
+	if SilentReplyToken == "" {
+		t.Error("SilentReplyToken must not be empty")
+	}
+	// Must not look like a normal user message
+	if SilentReplyToken[0] != '_' {
+		t.Error("SilentReplyToken should start with '_' to avoid collisions with normal messages")
+	}
+}
+
+// TestPromptMode_DefaultIsFull verifies new ContextBuilders default to full mode.
+func TestPromptMode_DefaultIsFull(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-ctx-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cb := NewContextBuilder(tmpDir)
+	prompt := cb.BuildSystemPrompt()
+
+	// Full mode includes user-facing sections
+	if !containsString(prompt, "picoclaw") {
+		t.Error("Full-mode prompt should contain 'picoclaw' identity section")
+	}
+	if !containsString(prompt, SilentReplyToken) {
+		t.Error("Full-mode prompt should include the silent reply token instruction")
+	}
+}
+
+// TestPromptMode_Minimal verifies minimal mode produces a shorter, subagent-focused prompt.
+func TestPromptMode_Minimal(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-ctx-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Write a SOUL.md file to the workspace to confirm it is NOT included in minimal mode
+	soulContent := "SOUL: I am a full agent personality."
+	if err := os.WriteFile(filepath.Join(tmpDir, "SOUL.md"), []byte(soulContent), 0o644); err != nil {
+		t.Fatalf("Failed to write SOUL.md: %v", err)
+	}
+
+	cb := NewContextBuilder(tmpDir)
+	cb.SetPromptMode(PromptModeMinimal)
+	prompt := cb.BuildSystemPrompt()
+
+	// Minimal mode should be shorter and focused on subagent behaviour
+	if containsString(prompt, soulContent) {
+		t.Error("Minimal-mode prompt should NOT include bootstrap files like SOUL.md")
+	}
+	if !containsString(prompt, "subagent") {
+		t.Error("Minimal-mode prompt should mention 'subagent'")
+	}
+}
+
+// TestPromptMode_FullContainsSafety verifies the full prompt includes a Safety section.
+func TestPromptMode_FullContainsSafety(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-ctx-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cb := NewContextBuilder(tmpDir)
+	prompt := cb.BuildSystemPrompt()
+
+	if !containsString(prompt, "## Safety") {
+		t.Error("Full-mode prompt should include a '## Safety' section")
+	}
+	if !containsString(prompt, "## Tool Call Style") {
+		t.Error("Full-mode prompt should include a '## Tool Call Style' section")
+	}
+}
+
+// containsString reports whether sub is within s.
+func containsString(s, sub string) bool {
+	return strings.Contains(s, sub)
 }

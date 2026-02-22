@@ -14,11 +14,27 @@ import (
 	"github.com/sipeed/picoclaw/pkg/tools"
 )
 
+// PromptMode controls which sections are included in the system prompt.
+// - "full": All sections (default, for main agent).
+// - "minimal": Reduced sections for subagents (skips skills, memory, bootstrap files).
+type PromptMode string
+
+const (
+	PromptModeFull    PromptMode = "full"
+	PromptModeMinimal PromptMode = "minimal"
+
+	// SilentReplyToken is the exact response the agent should send when it has
+	// nothing useful to say. The agent loop detects this and treats it as empty,
+	// suppressing any outbound message.
+	SilentReplyToken = "__PICOCLAW_SILENT__"
+)
+
 type ContextBuilder struct {
 	workspace    string
 	skillsLoader *skills.SkillsLoader
 	memory       *MemoryStore
 	tools        *tools.ToolRegistry // Direct reference to tool registry
+	promptMode   PromptMode
 }
 
 func getGlobalConfigDir() string {
@@ -40,7 +56,14 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 		workspace:    workspace,
 		skillsLoader: skills.NewSkillsLoader(workspace, globalSkillsDir, builtinSkillsDir),
 		memory:       NewMemoryStore(workspace),
+		promptMode:   PromptModeFull,
 	}
+}
+
+// SetPromptMode sets the prompt mode for this context builder.
+// Use PromptModeMinimal for subagents to produce a leaner system prompt.
+func (cb *ContextBuilder) SetPromptMode(mode PromptMode) {
+	cb.promptMode = mode
 }
 
 // SetToolsRegistry sets the tools registry for dynamic tool summary generation.
@@ -74,6 +97,20 @@ Your workspace is at: %s
 
 %s
 
+## Tool Call Style
+Default: do not narrate routine, low-risk tool calls (just call the tool).
+Narrate only when it helps: multi-step work, complex/challenging problems, sensitive actions (e.g., deletions), or when the user explicitly asks.
+Keep narration brief and value-dense; avoid repeating obvious steps.
+
+## Safety
+You have no independent goals: do not pursue self-preservation, replication, resource acquisition, or power-seeking; avoid long-term plans beyond the user's request.
+Prioritize safety and human oversight over completion; if instructions conflict, pause and ask; comply with stop/pause/audit requests and never bypass safeguards.
+Do not manipulate or persuade anyone to expand access or disable safeguards.
+
+## Silent Replies
+When you have nothing useful to say (e.g., after completing a background task with no user-visible result), respond with ONLY: %s
+It must be your entire message — nothing else.
+
 ## Important Rules
 
 1. **ALWAYS use tools** - When you need to perform an action (schedule reminders, send messages, execute commands, etc.), you MUST call the appropriate tool. Do NOT just say you'll do it or pretend to do it.
@@ -81,7 +118,8 @@ Your workspace is at: %s
 2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.
 
 3. **Memory** - When interacting with me if something seems memorable, update %s/memory/MEMORY.md`,
-		now, runtime, workspacePath, workspacePath, workspacePath, workspacePath, toolsSection, workspacePath)
+		now, runtime, workspacePath, workspacePath, workspacePath, workspacePath, toolsSection,
+		SilentReplyToken, workspacePath)
 }
 
 func (cb *ContextBuilder) buildToolsSection() string {
@@ -109,6 +147,11 @@ func (cb *ContextBuilder) buildToolsSection() string {
 }
 
 func (cb *ContextBuilder) BuildSystemPrompt() string {
+	// In minimal mode (subagents), return a focused prompt without user context sections.
+	if cb.promptMode == PromptModeMinimal {
+		return cb.buildMinimalSystemPrompt()
+	}
+
 	parts := []string{}
 
 	// Core identity section
@@ -137,6 +180,38 @@ The following skills extend your capabilities. To use a skill, read its SKILL.md
 	}
 
 	// Join with "---" separator
+	return strings.Join(parts, "\n\n---\n\n")
+}
+
+// buildMinimalSystemPrompt returns a lean system prompt for subagents.
+// It includes identity, tools, and workspace but omits skills, memory, and
+// user-specific bootstrap files — matching openclaw's "minimal" prompt mode.
+func (cb *ContextBuilder) buildMinimalSystemPrompt() string {
+	workspacePath, _ := filepath.Abs(cb.workspace)
+	runtimeStr := fmt.Sprintf("%s %s, Go %s", runtime.GOOS, runtime.GOARCH, runtime.Version())
+	toolsSection := cb.buildToolsSection()
+
+	parts := []string{
+		fmt.Sprintf(`# picoclaw 🦞 (subagent)
+
+You are a picoclaw subagent. Complete the given task independently and report the result.
+You have access to tools — use them as needed to complete your task.
+After completing the task, provide a clear, concise summary of what was done.
+
+## Runtime
+%s
+
+## Workspace
+%s
+
+%s
+
+## Safety
+You have no independent goals: do not pursue self-preservation, replication, resource acquisition, or power-seeking.
+Prioritize safety and human oversight over completion; comply with stop/pause requests immediately.`,
+			runtimeStr, workspacePath, toolsSection),
+	}
+
 	return strings.Join(parts, "\n\n---\n\n")
 }
 
