@@ -1,11 +1,6 @@
 ---
 name: n8n-tools
-description: |
-  n8n Workflow-Automatisierung (MCP + REST API + Webhooks).
-  Nur verwenden wenn der Benutzer explizit nach n8n, Workflow-Automatisierung
-  oder Workflow-Ausfuehrung fragt. Nicht fuer andere Aufgaben laden.
-  Kann: Workflows suchen, ausfuehren, erstellen, verwalten, aktivieren/deaktivieren.
-  Drei Kanaele: MCP (ausfuehren), REST API (verwalten), Webhooks (direkte Tool-Aufrufe).
+description: "n8n Workflow-Automatisierung (MCP + REST API + Webhooks). Nur verwenden wenn der Benutzer explizit nach n8n, Workflow-Automatisierung oder Workflow-Ausfuehrung fragt. Nicht fuer andere Aufgaben laden. Kann: Workflows suchen, ausfuehren, erstellen, verwalten, aktivieren/deaktivieren. Drei Kanaele: MCP (ausfuehren), REST API (verwalten), Webhooks (direkte Tool-Aufrufe)."
 ---
 
 # n8n Toolbox — MCP + REST API + Webhooks

@@ -1,7 +1,6 @@
 ---
 name: terminal-guide
 description: Anleitung fuer korrekte Terminal-Nutzung auf Android/Termux
-version: "1.0"
 ---
 
 # Terminal-Anleitung (Android/Termux)
