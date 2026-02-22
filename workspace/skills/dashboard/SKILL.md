@@ -1,149 +1,102 @@
 ---
 name: dashboard
-description: "Dashboard-Management auf Port 7000: Widgets dynamisch entwickeln, produktive Datenquellen synchronisieren, Interaktionen persistent verarbeiten und personalisiert aktuell halten."
+description: "Create terminal-based dashboards to display metrics, logs, and system information in a structured, real-time view. Use when the user wants to monitor system stats, application metrics, log streams, or build a custom TUI dashboard using tools like btop, glow, tmux layouts, or shell scripts."
+metadata: {"nanobot":{"emoji":"📊","os":["darwin","linux"]}}
 ---
 
-````skill
-# Dashboard Skill (Persönlichkeit + Produktivdaten)
+# Dashboard Skill
 
-## Mission
-Dieses Skill macht das Dashboard zu einem **lebenden Teil von PicoClaws Persönlichkeit**:
-- immer aktuell,
-- individuell auf den User zugeschnitten,
-- interaktiv,
-- und strikt ohne Dummy-/Fake-Daten.
+Build and use terminal dashboards for monitoring and displaying information.
 
-Dashboard URL: `http://192.168.2.50:7000/`
+## Quick Dashboard Tools
 
-Script:
+### btop (system resources)
 ```bash
-python3 skills/dashboard/scripts/dashboard.py <command>
+btop                  # Interactive CPU/memory/disk/network monitor
+btop --utf-force      # Force UTF-8 box drawing characters
 ```
 
----
-
-## Guardrails (nicht verhandelbar)
-
-1. **No Dummy Data:** Niemals Platzhalter, erfundene Werte oder Beispielinhalte als echte Information ausgeben.
-2. **No Blind Writes:** Nie `dashboard/data.json` manuell editieren. Nur `update-widget`, `sync-data`, Template-Befehle und Skill-Skripte verwenden.
-3. **Freshness First:** Vor user-sichtbaren Antworten bei datengetriebenen Widgets immer Datenquelle aktualisieren (`sync-data` oder skill-eigenen Fetch).
-4. **Read-before-Write:** Bestehendes Widget lesen/erhalten; nur benötigte Felder ändern, niemals funktionierende Struktur überschreiben.
-5. **Interaktiv = persistent:** Klicks/Aktionen müssen serverseitig gespeichert und nach Refresh weiterhin konsistent sein.
-6. **Fail closed:** Wenn echte Datenquelle fehlschlägt, keine Fake-Ausgabe; stattdessen ehrlicher Status im Widget (z. B. „Quelle aktuell nicht erreichbar“).
-7. **Personalisierung Pflicht:** Widget-Titel, Priorisierung und Inhalte auf aktuelle Nutzerziele/Alltag ausrichten.
-
----
-
-## Skill-Load Ablauf (immer ausführen)
-
-1. `python3 skills/dashboard/scripts/dashboard.py ensure-running`
-2. `python3 skills/dashboard/scripts/dashboard.py health`
-3. `python3 skills/dashboard/scripts/dashboard.py status`
-4. `python3 skills/dashboard/scripts/dashboard.py list-widget-templates`
-5. `python3 skills/dashboard/scripts/dashboard.py sync-data`
-
-Wenn ein Check fehlschlägt: erst reparieren, dann weiterarbeiten.
-
----
-
-## Kernbefehle
-
-### Server
+### watch (auto-refresh any command)
 ```bash
-python3 skills/dashboard/scripts/dashboard.py ensure-running
-python3 skills/dashboard/scripts/dashboard.py status
-python3 skills/dashboard/scripts/dashboard.py restart
-python3 skills/dashboard/scripts/dashboard.py health
+watch -n 2 'df -h'                    # Disk usage, refresh every 2s
+watch -n 1 'ps aux --sort=-%cpu | head -15'  # Top CPU processes
+watch -d -n 5 'netstat -an | grep ESTABLISHED | wc -l'  # Connection count
 ```
 
-### Widgets
+### tmux multi-pane dashboard
+
+Create a monitoring layout with multiple panes:
+
 ```bash
-python3 skills/dashboard/scripts/dashboard.py update-widget <id> '<json>'
-python3 skills/dashboard/scripts/dashboard.py remove-widget <id>
-python3 skills/dashboard/scripts/dashboard.py sync-data
+SESSION="dashboard"
+SOCKET="${TMPDIR:-/tmp}/dashboard.sock"
+
+tmux -S "$SOCKET" new-session -d -s "$SESSION" -x 220 -y 50
+
+# Split into panes
+tmux -S "$SOCKET" split-window -h -t "$SESSION"
+tmux -S "$SOCKET" split-window -v -t "$SESSION":0.0
+tmux -S "$SOCKET" split-window -v -t "$SESSION":0.1
+
+# Assign content to each pane
+tmux -S "$SOCKET" send-keys -t "$SESSION":0.0 'watch -n 2 "df -h"' Enter
+tmux -S "$SOCKET" send-keys -t "$SESSION":0.1 'htop' Enter
+tmux -S "$SOCKET" send-keys -t "$SESSION":0.2 'watch -n 5 "free -h"' Enter
+tmux -S "$SOCKET" send-keys -t "$SESSION":0.3 'tail -f /var/log/syslog' Enter
+
+# Attach
+tmux -S "$SOCKET" attach -t "$SESSION"
 ```
 
-### Templates
+## System Metrics Dashboard (Shell Script)
+
+Quick ASCII dashboard printed to terminal:
+
 ```bash
-python3 skills/dashboard/scripts/dashboard.py export-widget-templates
-python3 skills/dashboard/scripts/dashboard.py list-widget-templates
-python3 skills/dashboard/scripts/dashboard.py save-widget-template <widget-id> [template-name]
-python3 skills/dashboard/scripts/dashboard.py apply-widget-template <template-name> [new-widget-id]
+#!/usr/bin/env bash
+while true; do
+  clear
+  echo "═══════════════════════════════════════"
+  echo "  SYSTEM DASHBOARD — $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "═══════════════════════════════════════"
+
+  echo ""
+  echo "── CPU ──────────────────────────────"
+  top -bn1 | grep "Cpu(s)" | awk '{printf "  Usage: %.1f%%\n", 100-$8}'
+
+  echo ""
+  echo "── Memory ───────────────────────────"
+  free -h | awk '/^Mem:/{printf "  Used: %s / %s\n", $3, $2}'
+
+  echo ""
+  echo "── Disk ─────────────────────────────"
+  df -h / | awk 'NR==2{printf "  Root: %s used, %s free (%s)\n", $3, $4, $5}'
+
+  echo ""
+  echo "── Network ──────────────────────────"
+  ip -s link show eth0 2>/dev/null | awk '/RX:/{getline; printf "  RX: %s bytes\n", $1}' || true
+  ip -s link show eth0 2>/dev/null | awk '/TX:/{getline; printf "  TX: %s bytes\n", $1}' || true
+
+  echo ""
+  echo "── Top Processes ────────────────────"
+  ps aux --sort=-%cpu | awk 'NR>1 && NR<=6{printf "  %-20s CPU: %s%%\n", $11, $3}'
+
+  sleep 5
+done
 ```
 
-### Watchdog
+## Log Streaming Dashboard
+
 ```bash
-python3 skills/dashboard/scripts/watchdog.py ensure-running
-python3 skills/dashboard/scripts/watchdog.py status
-python3 skills/dashboard/scripts/watchdog.py install-cron
+# Multi-source log watcher with color
+tail -f /var/log/syslog /var/log/auth.log 2>/dev/null | \
+  grep --line-buffered -E "(error|warn|crit)" --color=always
 ```
 
----
+## Custom Metrics
 
-## Standard-Workflow für jeden neuen Widget-Wunsch
-
-1. **Intent klären:** Was soll der User live sehen/steuern?
-2. **Quelle festlegen:** Reale Datenquelle bestimmen (bestehendes Skill oder neues Skill).
-3. **Widget wählen:** Bestehendes Widget erweitern oder Template anwenden.
-4. **Minimal ändern:** Mit `update-widget` gezielt Felder setzen.
-5. **Daten befüllen:** Reale Daten synchronisieren (`sync-data` oder skill-spezifischer Fetch).
-6. **Interaktion testen:** Klick/Aktion -> Persistenz -> Reload prüfen.
-7. **Template sichern:** Bei stabiler Struktur `save-widget-template`.
-
----
-
-## Contract für neue (auch selbst entwickelte) Skills
-
-Wenn PicoClaw auf User-Wunsch neue Skills erstellt, müssen Dashboard-Integrationen diesem Vertrag folgen:
-
-1. Skill liefert **maschinenlesbar** (JSON) aktuelle Daten.
-2. Dashboard erhält einen klaren Mapper: Skill-JSON -> Widget-`data`.
-3. Interaktionen nutzen eindeutige Actions (`<skill>-<action>`), mit serverseitiger Persistenz.
-4. Fehlerpfad liefert Status-/Hinweistext, aber **keine erfundenen Daten**.
-5. Nach Integration: `status`, `sync-data`, Interaktionsprobe dokumentiert erfolgreich.
-
-Ziel: Neue Skills sollen ohne Sonderlogik-Wildwuchs als Widgets integrierbar sein.
-
----
-
-## Produktive Datenquellen (Priorität)
-
-- Haushalt, Tasks, TODOs, Kalender: `skills/haushalt/scripts/haushalt.py`
-- Dashboard-Synchronisierung: `python3 skills/dashboard/scripts/dashboard.py sync-data`
-- Weitere Skills: deren JSON-CLI/API (niemals freie Textausgaben parsen, wenn JSON verfügbar ist)
-
----
-
-## Widget-Schema (Pflicht)
-
-```json
-{
-  "id": "widget-id",
-  "type": "widget-type",
-  "title": "Titel",
-  "size": "small|medium|large",
-  "data": {}
-}
-```
-
----
-
-## Anti-Patterns (verboten)
-
-- Dummy-/Beispieldaten als echte Daten darstellen
-- Widget ohne `data`
-- Vollständiges Überschreiben bei kleiner Feldänderung
-- Interaktive Oberfläche ohne Persistenz
-- „Erfolg“ melden ohne `health`/`status`/Datenprobe
-
----
-
-## Abschluss-Check vor User-Antwort
-
-- [ ] Dashboard erreichbar (`health` OK)
-- [ ] Widgets sichtbar und nicht leer
-- [ ] Daten sind echt und aktuell synchronisiert
-- [ ] Interaktionen bleiben nach Reload erhalten
-- [ ] Änderungen sind user-spezifisch (keine generischen Platzhalter)
-
-````
+For application-specific dashboards, see `references/dashboard-patterns.md` for:
+- Prometheus/Grafana integration
+- JSON metrics display with `jq`
+- HTTP endpoint polling patterns
+- Time-series data in the terminal

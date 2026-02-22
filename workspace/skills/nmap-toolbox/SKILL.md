@@ -1,71 +1,131 @@
 ---
 name: nmap-toolbox
-description: Zuverlässige Netzwerk-Scans mit nmap. Verwende diesen Skill für: (1) LAN-Geräte finden (ping/network scan), (2) Port-Scans (offene Ports finden), (3) Service-Erkennung (welcher Dienst läuft), (4) OS-Detection, (5) aggressive Full-Scans. Immer timeout und max-retries setzen für Stabilität.
+description: "Network scanning and reconnaissance with nmap. Use when performing port scans, service/version detection, OS fingerprinting, network discovery, firewall analysis, or running NSE scripts for vulnerability checks."
+metadata: {"nanobot":{"emoji":"🔍","os":["darwin","linux"],"requires":{"bins":["nmap"]},"install":[{"id":"brew","kind":"brew","formula":"nmap","bins":["nmap"],"label":"Install nmap (brew)"},{"id":"apt","kind":"apt","package":"nmap","bins":["nmap"],"label":"Install nmap (apt)"}]}}
 ---
 
-# nmap-toolbox
+# Nmap Toolbox
 
-Schneller Zugriff auf alle nmap-Scans über das Python-Script.
+Use `nmap` for network discovery and security auditing.
 
-## Script
+> **Legal note:** Only scan networks and hosts you own or have explicit written permission to test.
 
-```
-skills/nmap-toolbox/scripts/nmap-toolbox.py
-```
-
-## Verfügbare Scans
-
-| Scan | Befehl | Beschreibung |
-|------|--------|--------------|
-| `ping` | `python3 ... ping <IP>` | Ping-Scan, findet aktive Hosts |
-| `network` | `python3 ... network <Subnetz>` | Netzwerk-Scan (z.B. 192.168.2.0/24) |
-| `ports` | `python3 ... ports <IP> --ports 1-1000` | Port-Scan (TCP) |
-| `top` | `python3 ... top <IP> --top 100` | Top-n häufigste Ports |
-| `service` | `python3 ... service <IP>` | Dienst+Version erkennen |
-| `os` | `python3 ... os <IP>` | OS-Detection |
-| `aggressive` | `python3 ... aggressive <IP>` | Alles: OS, Service, Scripts, Traceroute |
-| `tcp-full` | `python3 ... tcp-full <IP>` | Alle 65535 TCP-Ports |
-| `udp-top` | `python3 ... udp-top <IP> --top 100` | Top UDP-Ports |
-
-## Beispiele
+## Common Scans
 
 ```bash
-# Netzwerk-Scan (alle Geräte im LAN)
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py network 192.168.2.0/24
+# Host discovery (no port scan)
+nmap -sn 192.168.1.0/24
 
-# Einzelner Host - Ping
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py ping 192.168.2.1
+# Fast port scan (top 1000 ports, no DNS resolution)
+nmap -F -n 192.168.1.1
 
-# Port-Scan (alle gängigen Ports)
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py ports 192.168.2.1
+# Full TCP connect scan (no root required)
+nmap -sT 192.168.1.1
 
-# Top 100 Ports
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py top 192.168.2.1 --top 100
+# SYN scan (fast, requires root/sudo)
+sudo nmap -sS 192.168.1.1
 
-# Service-Erkennung
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py service 192.168.2.1
+# All ports
+sudo nmap -p- 192.168.1.1
 
-# Aggressive Scan (vollständig)
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py aggressive 192.168.2.1
+# Specific ports
+nmap -p 22,80,443,8080 192.168.1.1
 
-# JSON-Output für Weiterverarbeitung
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py ports 192.168.2.1 --json
-
-# Timeout erhöhen bei langsamen Targets
-python3 skills/nmap-toolbox/scripts/nmap-toolbox.py service 192.168.2.1 --timeout 300
+# Port range
+nmap -p 1-1024 192.168.1.1
 ```
 
-## Wichtig
+## Service & Version Detection
 
-- **Immer Timeout setzen**: `--timeout <sekunden>` (Standard: 120s)
-- **Max-Retries**: Script setzt bereits `--max-retries 2`
-- **Timing**: `-T3` für Balance Geschwindigkeit/Zuverlässigkeit
-- **Output**: `--json` für strukturierte Ausgabe
+```bash
+# Version detection
+nmap -sV 192.168.1.1
 
-## Typische Workflows
+# Aggressive scan (version, OS, scripts, traceroute)
+sudo nmap -A 192.168.1.1
 
-1. **LAN-Geräte finden**: `network 192.168.2.0/24` → MACs + IPs
-2. **Bestimmtes Gerät scannen**: `ping <IP>` → Status prüfen
-3. **Offene Ports finden**: `ports <IP>` oder `top <IP>`
-4. **Dienst erkennen**: `service <IP>` → Port + Version
-5. **Vollständig**: `aggressive <IP>`
+# OS detection only
+sudo nmap -O 192.168.1.1
+```
+
+## Output Formats
+
+```bash
+# Save to all formats (normal, XML, grepable)
+nmap -oA /tmp/scan_results 192.168.1.0/24
+
+# XML output (parseable)
+nmap -oX /tmp/scan.xml 192.168.1.1
+
+# Grepable output
+nmap -oG /tmp/scan.gnmap 192.168.1.1
+
+# Parse grepable for open ports
+grep "Ports:" /tmp/scan.gnmap | grep -oP '\d+/open'
+```
+
+## NSE Scripts (Nmap Scripting Engine)
+
+```bash
+# List available scripts
+ls /usr/share/nmap/scripts/ | grep http
+
+# Default scripts
+sudo nmap -sC 192.168.1.1
+
+# Specific script
+sudo nmap --script http-title 192.168.1.1
+
+# Script categories
+sudo nmap --script "safe and discovery" 192.168.1.0/24
+
+# Vulnerability check (use with caution)
+sudo nmap --script vuln 192.168.1.1
+```
+
+## Performance & Timing
+
+```bash
+# Timing templates: T0 (paranoid) – T5 (insane)
+nmap -T4 192.168.1.0/24         # T4 = aggressive (good for LANs)
+nmap -T2 target.com             # T2 = polite (slower, less intrusive)
+
+# Parallel host groups and probes
+nmap --min-parallelism 100 --max-rtt-timeout 100ms 192.168.1.0/24
+```
+
+## Evasion & Stealth
+
+```bash
+# Fragment packets
+sudo nmap -f 192.168.1.1
+
+# Decoy scan (mix real IP with decoys)
+sudo nmap -D RND:5 192.168.1.1
+
+# Randomize host order
+nmap --randomize-hosts 192.168.1.0/24
+
+# Slow scan to avoid IDS
+nmap -T1 --scan-delay 1s 192.168.1.1
+```
+
+## Useful Combinations
+
+```bash
+# Quick internal network audit
+sudo nmap -sS -sV -T4 --open -oA /tmp/lan_audit 192.168.1.0/24
+
+# Web server enumeration
+sudo nmap -sV --script "http-*" -p 80,443,8080,8443 target.com
+
+# SSH audit
+sudo nmap --script ssh-auth-methods -p 22 192.168.1.1
+```
+
+## Reading Scan Results
+
+See `references/nmap-output.md` for:
+- Interpreting port states (open/closed/filtered)
+- Understanding service version output
+- Common NSE script output formats

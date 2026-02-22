@@ -1,88 +1,112 @@
 ---
 name: termux-api
-description: Android-Hardware und System-APIs (Batterie, WiFi, Sensoren, Kamera, Benachrichtigungen, Clipboard, Helligkeit, Taschenlampe). Kein su noetig.
+description: "Access Android device APIs from the Termux terminal using the termux-api package. Use when interacting with Android hardware or services: battery status, camera, clipboard, contacts, GPS/location, microphone recording, notifications, SMS, telephony, sensors, torch/flashlight, volume, vibration, wifi, and more."
+metadata: {"nanobot":{"emoji":"📱","os":["android"],"requires":{"bins":["termux-battery-status"]},"install":[{"id":"termux-api-pkg","kind":"apt","package":"termux-api","bins":["termux-battery-status"],"label":"Install Termux:API package (pkg install termux-api)"}]}}
 ---
 
-# Termux API Skill
+# Termux:API Skill
 
-Android-Hardware und System-APIs für PicoClaw.
+Use `termux-*` commands to interact with Android device APIs. Requires the **Termux:API** companion app installed from F-Droid (or Play Store) AND the `termux-api` package (`pkg install termux-api`).
 
-## Voraussetzungen
-- Termux:API App installiert (com.termux.api)
-- Alle Permissions per root gesetzt (Kamera, Kontakte, Location, SMS, etc.)
-- Kein `su` nötig — die APIs laufen über die Termux:API Android-App
-
-## Nutzung
+## Quick Reference
 
 ```bash
-python3 skills/termux-api/scripts/termux-api.py <befehl> [optionen]
+# Battery
+termux-battery-status            # JSON: health, percentage, plugged, status, temperature
+
+# Camera
+termux-camera-info               # List available cameras
+termux-camera-photo /tmp/pic.jpg # Take photo (camera-id 0=back, 1=front)
+
+# Clipboard
+termux-clipboard-get             # Read clipboard text
+termux-clipboard-set "text"      # Write to clipboard
+
+# Contacts
+termux-contact-list              # JSON list of contacts
+termux-contact-list | jq '.[] | select(.name | test("Alice"))'
+
+# Location / GPS
+termux-location                  # Current GPS location (JSON)
+termux-location -p gps -r once   # Force GPS (slower, more accurate)
+
+# Microphone / Audio recording
+termux-microphone-record -f /tmp/out.m4a -l 10   # Record 10 seconds
+termux-microphone-record -q       # Query recording status
+termux-microphone-record -q stop  # Stop recording
+
+# Notifications
+termux-notification --title "Hello" --content "World"
+termux-notification --id 42 --title "Progress" --content "50%" --ongoing
+termux-notification-remove 42
+
+# SMS
+termux-sms-list -t inbox -l 10   # Last 10 inbox messages
+termux-sms-send -n "+1234567890" "Hello from Termux"
+
+# Sensors
+termux-sensor -l                 # List available sensors
+termux-sensor -s "accelerometer" -n 5   # 5 readings from accelerometer
+
+# Torch / Flashlight
+termux-torch on
+termux-torch off
+
+# Volume
+termux-volume                    # Current volume levels
+termux-volume music 8            # Set music volume to 8
+
+# Vibration
+termux-vibrate -d 500            # Vibrate for 500 ms
+
+# WiFi
+termux-wifi-connectioninfo       # Current WiFi connection details
+termux-wifi-scaninfo             # Scan for available networks
+
+# Text-to-Speech
+termux-tts-speak "Hello world"
+termux-tts-speak -e com.google.android.tts -l en -r 1.0 "Hello"
+
+# Share / Open
+termux-share /tmp/file.txt       # Share file via Android share sheet
+termux-open-url "https://example.com"
+termux-open /tmp/file.pdf        # Open file with default app
 ```
 
-## Verfügbare Befehle
+## Working with JSON Output
 
-### Hardware & System
-| Befehl | Beschreibung | Beispiel |
-|--------|-------------|----------|
-| `battery` | Batterie-Status (Ladung, Temp, Quelle) | `python3 skills/termux-api/scripts/termux-api.py battery` |
-| `wifi` | WiFi-Verbindung (IP, SSID, Signal) | `python3 skills/termux-api/scripts/termux-api.py wifi` |
-| `wifi-scan` | WiFi-Netzwerke scannen | `python3 skills/termux-api/scripts/termux-api.py wifi-scan` |
-| `audio` | Audio-Systeminformationen | `python3 skills/termux-api/scripts/termux-api.py audio` |
-| `volume` | Lautstärke anzeigen | `python3 skills/termux-api/scripts/termux-api.py volume` |
-| `volume --stream music --value 10` | Lautstärke setzen | Streams: call, system, ring, music, alarm, notification |
-| `brightness auto` | Helligkeit (auto oder 0-255) | `python3 skills/termux-api/scripts/termux-api.py brightness 128` |
-| `torch on/off` | Taschenlampe | `python3 skills/termux-api/scripts/termux-api.py torch on` |
-| `vibrate --duration 500` | Vibrieren (ms) | `python3 skills/termux-api/scripts/termux-api.py vibrate -d 1000` |
-| `sensor-list` | Verfügbare Sensoren | Accelerometer, Light, Grip |
-| `sensor-read --sensor <name>` | Sensor auslesen | `python3 skills/termux-api/scripts/termux-api.py sensor-read -s "CM3323E Light"` |
-| `camera-info` | Kamera-Details | 2 Kameras: 0=back (3264x2448), 1=front |
-| `photo --camera 0 --output pfad.jpg` | Foto aufnehmen | `python3 skills/termux-api/scripts/termux-api.py photo -c 0 -o cloud/foto.jpg` |
+All `termux-*` commands return JSON. Use `jq` to parse:
 
-### Benachrichtigungen & UI
-| Befehl | Beschreibung |
-|--------|-------------|
-| `toast "Text"` | Toast-Nachricht auf Bildschirm |
-| `notification --title X --content Y --id Z` | Android-Benachrichtigung |
-| `notification-remove <id>` | Benachrichtigung entfernen |
-| `notification-list` | Aktive Benachrichtigungen |
+```bash
+pkg install jq
 
-### Clipboard
-| Befehl | Beschreibung |
-|--------|-------------|
-| `clipboard-get` | Zwischenablage lesen |
-| `clipboard-set "Text"` | In Zwischenablage kopieren |
+# Battery percentage as plain number
+termux-battery-status | jq '.percentage'
 
-### Media & System
-| Befehl | Beschreibung |
-|--------|-------------|
-| `media-scan <datei>` | Datei im Android Media-Scanner registrieren |
-| `wake-lock` | CPU-Schlaf verhindern |
-| `wake-unlock` | Wake-Lock aufheben |
-| `telephony` | Telefonie-Infos (WiFi-only Tablet) |
-| `contacts` | Kontaktliste |
+# GPS coordinates
+termux-location | jq '{lat: .latitude, lon: .longitude}'
 
-### TTS (Text-to-Speech)
-| Befehl | Beschreibung |
-|--------|-------------|
-| `tts-speak "Text" --rate 1.0` | Text vorlesen |
-| `tts-engines` | Verfügbare TTS-Engines |
+# Unread SMS count
+termux-sms-list -t inbox | jq '[.[] | select(.read == false)] | length'
+```
 
-### IR-Blaster
-| Befehl | Beschreibung |
-|--------|-------------|
-| `ir-frequencies` | Unterstützte IR-Frequenzen |
-| `ir-transmit -f 38000 -p "100,50,100,50"` | IR-Signal senden |
+## Permissions
 
-### System-Übersicht
-| Befehl | Beschreibung |
-|--------|-------------|
-| `info` | Batterie + WiFi + Volume + Audio auf einen Blick |
+Android permissions must be granted to the **Termux:API** app:
+- Location: `termux-location` requires Location permission
+- Camera: `termux-camera-photo` requires Camera permission
+- Contacts: `termux-contact-list` requires Contacts permission
+- SMS: `termux-sms-list/send` requires SMS permission
+- Microphone: `termux-microphone-record` requires Microphone permission
 
-## Flags
-- `--json` — Immer JSON-Output (für Automatisierung)
+Grant via: Android Settings → Apps → Termux:API → Permissions
 
-## Wichtige Hinweise
-- **Kein su nötig!** Die API läuft über die Android-App, nicht über Shell-Befehle
-- **Location funktioniert NICHT** — WiFi-only Tablet hat kein GPS
-- **TTS**: Nur wenn eine TTS-Engine auf dem Gerät installiert ist
-- **Timeouts**: Alle Befehle haben Timeouts (8-60s), hängen sich nie auf
-- **Fotos**: Default-Speicherort ist `cloud/photo.jpg` (wird via Nextcloud gesynct)
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `command not found` | Run `pkg install termux-api` |
+| Command hangs / no output | Termux:API companion app not installed or not running |
+| Permission denied | Grant relevant Android permission to Termux:API app |
+| Location returns null | Enable Location in Android settings; use `-p network` for faster result |
+| SMS send fails | Check SMS permission and carrier restrictions |

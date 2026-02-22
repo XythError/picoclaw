@@ -1,233 +1,114 @@
 ---
 name: terminal-guide
-description: Anleitung fuer korrekte Terminal-Nutzung auf Android/Termux
-version: "1.0"
+description: "Reference guide for terminal and shell usage. Use when the user needs help with shell commands, scripting, navigation, file operations, pipes, redirects, process management, or general command-line productivity tips."
+metadata: {"nanobot":{"emoji":"🖥️","os":["darwin","linux"]}}
 ---
 
-# Terminal-Anleitung (Android/Termux)
+# Terminal Guide
 
-## WICHTIGSTE REGEL: DENKE ZUERST, HANDLE DANN
+Quick reference for shell commands and productivity patterns.
 
-Bevor du einen Befehl ausfuehrst, stelle dir diese Fragen:
-1. **Was will ich erreichen?** (konkretes Ziel)
-2. **Welche Information brauche ich dafuer?** (1-2 gezielte Befehle)
-3. **Ist das Ergebnis realistisch?** (kann das auf diesem Geraet funktionieren?)
+## Navigation
 
-**NIEMALS**: 20 Befehle blind ausprobieren ohne Plan.
-**STATTDESSEN**: 2-3 gezielte Befehle, Ergebnis analysieren, dann handeln.
-
----
-
-## Dateisystem-Uebersicht
-
-```
-/                              → Android Root (read-only!)
-├── /system/                   → Android System (read-only!)
-├── /data/                     → App-Daten (nur mit su)
-│   └── /data/data/com.termux/files/
-│       ├── home/              → $HOME (dein Arbeitsverzeichnis)
-│       │   ├── sdcard/        → SD-Karte 473GB (Bind-Mount)
-│       │   ├── .picoclaw/     → PicoClaw Workspace
-│       │   └── mount-sdcard.sh
-│       └── usr/               → Termux-Programme
-│           └── bin/           → Ausfuehrbare Dateien (python3, curl, nmap...)
-├── /storage/emulated/0/       → Interner Speicher (10GB, FAST VOLL!)
-├── /mnt/expand/UUID/          → Adopted Storage (NUR mit su, NICHT anfassen)
-└── /sdcard/                   → Symlink zu /storage/emulated/0/
-```
-
-### Wo speichere ich was?
-| Was | Wo | Warum |
-|-----|-----|-------|
-| Downloads, Bilder, grosse Dateien | `~/sdcard/downloads/` | 473 GB frei |
-| Generierte Bilder | `~/sdcard/images/` | Viel Platz |
-| Backups | `~/sdcard/backups/` | Sicher, viel Platz |
-| Temp-Dateien | `~/sdcard/tmp/` oder `$TMPDIR` | Je nach Groesse |
-| Rezepte | `cloud/Rezepte/` | Nextcloud-Sync |
-| Kalender | `cloud/Calendar/` | CalDAV-Sync |
-| Dokumente fuer User | `cloud/` | Nextcloud-Sync |
-| Scripts/Tools | `~/.picoclaw/workspace/` | PicoClaw-intern |
-
----
-
-## Haeufige Fehler und Loesungen
-
-### Fehler 1: "Device or resource busy"
-**Bedeutung**: Die Partition ist bereits gemountet/in Benutzung.
-**Loesung**: NICHT erneut versuchen! Pruefen wo sie gemountet ist:
 ```bash
-mount | grep <device>
-cat /proc/mounts | grep <device>
+cd ~            # Home directory
+cd -            # Previous directory
+pwd             # Print working directory
+ls -lah         # Long list, all files, human-readable sizes
+tree -L 2       # Directory tree, 2 levels deep
 ```
-Wenn sie gemountet ist → sie FUNKTIONIERT bereits. Einfach den Mount-Punkt nutzen.
 
-### Fehler 2: "I/O error" beim Mount
-**Bedeutung**: Die Partition ist kaputt, verschluesselt, oder ein Meta-Header.
-**Loesung**: NICHT 4x wiederholen! Einmal reicht. Moeglicherweise ist die Partition
-nicht fuer direkten Mount gedacht (z.B. Android Adopted Storage Meta-Partition).
+## File Operations
 
-### Fehler 3: "Permission denied"
-**Bedeutung**: Keine Rechte. In Termux fehlt oft su.
-**Loesung**: `su -c 'befehl'` verwenden.
-**ABER**: Pruefen ob su ueberhaupt noetig ist. Fuer ~/sdcard/ ist KEIN su noetig.
-
-### Fehler 4: "command not found" / "inaccessible or not found"
-**Bedeutung**: Das Programm ist nicht installiert.
-**Loesung**: NICHT andere aehnliche Programme probieren (parted, gdisk, etc.)
-Stattdessen: `pkg install <programm>` oder alternative Loesung suchen.
-Viele Linux-Tools sind auf Android NICHT verfuegbar.
-
-### Fehler 5: "No such file or directory"
-**Bedeutung**: Pfad existiert nicht.
-**Loesung**: `mkdir -p /pfad/zum/verzeichnis` VOR dem Befehl ausfuehren.
-
----
-
-## su-Befehle korrekt verwenden
-
-### Wann su verwenden?
-- System-Dateien lesen/schreiben (`/system/`, `/data/` ausserhalb Termux)
-- Netzwerk-Befehle (nmap, iptables)
-- Hardware-Zugriff (mount, block devices)
-
-### Wann KEIN su?
-- Alles in `$HOME` (~/)
-- `~/sdcard/` (bereits fuer Termux-User zugaenglich)
-- Python-Scripts ausfuehren
-- curl, wget Downloads
-- Dateien in `cloud/` bearbeiten
-
-### su + Termux-Programme
-Magisk su hat KEINEN Termux-PATH! Immer absolute Pfade:
 ```bash
-# FALSCH:
-su -c 'python3 script.py'
-su -c 'nmap 192.168.2.0/24'
-su -c 'curl https://...'
-
-# RICHTIG:
-su -c '/data/data/com.termux/files/usr/bin/python3 script.py'
-su -c '/data/data/com.termux/files/usr/bin/nmap 192.168.2.0/24'
-su -c '/data/data/com.termux/files/usr/bin/curl https://...'
+cp -r src/ dst/          # Copy directory recursively
+mv old.txt new.txt       # Move / rename
+rm -rf dir/              # Remove directory (caution!)
+mkdir -p a/b/c           # Create nested directories
+touch file.txt           # Create empty file / update timestamp
+ln -s target link        # Create symbolic link
 ```
 
----
+## Search
 
-## Korrekte Muster fuer haeufige Aufgaben
-
-### Datei herunterladen
 ```bash
-# Klein (<50MB): direkt
-curl -fsSL -o ~/sdcard/downloads/datei.zip "https://url"
-
-# Gross (>50MB): mit Fortschritt
-curl -fL -o ~/sdcard/downloads/datei.zip "https://url"
-
-# Mit User-Agent (fuer Websites die Bots blockieren):
-curl -fsSL -A "Mozilla/5.0 (Linux; Android 11)" -o ~/sdcard/downloads/bild.jpg "https://url"
+find . -name "*.log" -mtime -7      # Files modified last 7 days
+grep -r "pattern" ./src --include="*.go"
+grep -n "TODO" *.py                 # Show line numbers
+rg "pattern" --type js              # ripgrep (faster)
 ```
 
-### Datei verschieben/kopieren
+## Pipes & Redirects
+
 ```bash
-# Auf SD-Karte verschieben
-mv ~/grosse-datei.zip ~/sdcard/downloads/
-
-# Von SD-Karte nach Nextcloud
-cp ~/sdcard/images/foto.jpg cloud/Photos/
+cmd | head -20           # First 20 lines
+cmd | tail -f log.txt    # Follow live log output
+cmd > out.txt            # Redirect stdout to file (overwrite)
+cmd >> out.txt           # Append stdout to file
+cmd 2>&1 | tee out.txt   # Capture stdout+stderr, show and save
+cmd 2>/dev/null          # Discard errors
 ```
 
-### Verzeichnis erstellen
+## Process Management
+
 ```bash
-mkdir -p ~/sdcard/data/projekt-name/
+ps aux | grep python     # Find process by name
+kill -9 PID              # Force kill process
+pkill -f "pattern"       # Kill by name pattern
+jobs                     # List background jobs
+bg %1                    # Resume job in background
+fg %1                    # Bring job to foreground
+nohup cmd &              # Run detached, immune to hangup
 ```
 
-### Speicherplatz pruefen
+## Text Processing
+
 ```bash
-# SD-Karte
-df -h ~/sdcard/
-
-# Interner Speicher
-df -h ~/.
-
-# Groesste Dateien finden
-du -sh ~/sdcard/* | sort -rh | head -10
+sort -k2 -n file.txt     # Sort by 2nd column numerically
+uniq -c                  # Count duplicate lines
+wc -l file.txt           # Line count
+cut -d',' -f1,3 file.csv # Extract CSV columns 1 and 3
+awk '{print $2}' file    # Print second field
+sed 's/old/new/g' file   # Replace all occurrences
 ```
 
-### Prozess im Hintergrund starten
+## Compression
+
 ```bash
-# RICHTIG (mit su):
-su -c 'nohup /pfad/zum/programm > /dev/null 2>&1 &'
-
-# RICHTIG (ohne su):
-nohup programm > /dev/null 2>&1 &
-
-# FALSCH (blockiert exec!):
-su -c '/pfad/zum/programm &'
-programm &  # stdout bleibt offen
+tar czf archive.tar.gz dir/    # Create gzipped archive
+tar xzf archive.tar.gz         # Extract gzipped archive
+zip -r archive.zip dir/        # Create zip
+unzip archive.zip -d ./out/    # Extract zip
 ```
 
----
+## Networking
 
-## Was du NIEMALS tun darfst
+```bash
+curl -s "https://api.example.com" | jq .
+curl -X POST -H "Content-Type: application/json" -d '{"key":"val"}' URL
+wget -q -O /tmp/file.txt URL
+nc -zv host 443                # TCP connectivity check
+ss -tlnp                       # Show listening ports
+```
 
-1. **NIEMALS `mkfs` / `format` auf gemounteten Partitionen** — Datenverlust!
-2. **NIEMALS `dd` auf Block-Devices** — wird vom Safety Guard blockiert
-3. **NIEMALS `losetup`** auf bereits gemountete Devices
-4. **NIEMALS denselben fehlgeschlagenen Befehl 3+ Mal wiederholen**
-   → Wenn er 1x fehlschlaegt, schlaegt er auch beim 10. Mal fehl
-5. **NIEMALS** `/mnt/expand/`, `/dev/block/mmcblk*` direkt manipulieren
-   → Das ist Android Adopted Storage (verschluesselt, vom System verwaltet)
-6. **NIEMALS** Programme installieren ohne echten Bedarf (`pkg install X`)
-   → Interner Speicher ist knapp!
-7. **NIEMALS** Befehle ohne Ziel ausfuehren (kein `find / -name "disk"` ohne Grund)
+## Useful Shortcuts
 
----
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+C` | Kill current process |
+| `Ctrl+Z` | Suspend current process |
+| `Ctrl+D` | Exit / EOF |
+| `Ctrl+R` | Reverse history search |
+| `Ctrl+L` | Clear screen |
+| `!!` | Repeat last command |
+| `!$` | Last argument of previous command |
+| `Alt+.` | Insert last argument of previous command |
 
-## Problemloesung: Systematisch vorgehen
+## Advanced Patterns
 
-Wenn etwas nicht funktioniert:
-
-1. **Fehlermeldung LESEN** (nicht ignorieren!)
-2. **Verstehen** was der Fehler bedeutet
-3. **Ursache** pruefen (existiert der Pfad? Rechte? Programm installiert?)
-4. **EIN** gezielter Fix-Versuch
-5. Wenn das auch nicht klappt: **dem User Bescheid geben** mit der Fehlermeldung
-
-**NICHT**: 20 verschiedene Varianten ausprobieren und hoffen dass eine funktioniert.
-
----
-
-## Verfuegbare Programme (Termux)
-
-| Programm | Pfad | Funktion |
-|----------|------|----------|
-| python3 | /data/data/com.termux/files/usr/bin/python3 | Python Scripts |
-| curl | /data/data/com.termux/files/usr/bin/curl | HTTP Downloads |
-| nmap | /data/data/com.termux/files/usr/bin/nmap | Netzwerk-Scans |
-| git | /data/data/com.termux/files/usr/bin/git | Version Control |
-| go | /data/data/com.termux/files/usr/bin/go | Go Compiler |
-| jq | /data/data/com.termux/files/usr/bin/jq | JSON Parser |
-| rsync | /data/data/com.termux/files/usr/bin/rsync | Datei-Sync |
-| rclone | /data/data/com.termux/files/usr/bin/rclone | Cloud-Sync |
-| ssh/scp | /data/data/com.termux/files/usr/bin/ssh | Remote-Zugriff |
-| tar/gzip/bzip2 | /data/data/com.termux/files/usr/bin/ | Archive |
-| grep/sed/awk | /data/data/com.termux/files/usr/bin/ | Text-Verarbeitung |
-
-### NICHT verfuegbar (und NICHT installieren!)
-- parted, gdisk, fdisk (fuer Partitionierung — nicht noetig)
-- systemctl, service (Android hat kein systemd)
-- apt-get (Termux nutzt pkg)
-- docker, podman (nicht auf Android)
-
----
-
-## Android-spezifische Hinweise
-
-- **Adopted Storage**: SD-Karte ist verschluesselt und vom System verwaltet.
-  Zugriff NUR ueber ~/sdcard/ (Bind-Mount). NICHT direkt auf /dev/block/ zugreifen.
-- **SELinux**: Android hat SELinux im enforcing Modus. Manche Befehle scheitern
-  trotz Root-Rechte an SELinux-Policies.
-- **/tmp**: Read-only! Immer `$TMPDIR` verwenden.
-- **Reboot**: Nach einem Reboot muss ~/sdcard/ neu gemountet werden
-  (passiert automatisch via ~/.termux/boot/mount-sdcard.sh)
-- **RAM**: Nur 1.8 GB! Keine speicherhungrigen Befehle (grosse sort, awk auf Riesendateien, etc.)
+See `references/advanced-shell.md` for:
+- Shell scripting (variables, loops, conditionals)
+- Functions and aliases
+- Environment variable management
+- Shell options (`set -euo pipefail`)
+- Here documents and process substitution

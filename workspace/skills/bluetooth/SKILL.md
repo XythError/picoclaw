@@ -1,129 +1,129 @@
 ---
 name: bluetooth
-description: Bluetooth-Steuerung fuer Android (Termux + root). Ein/Aus, Scan, Pairing, Dateiversand, A2DP-Lautsprecher, Status.
+description: "Manage Bluetooth devices from the command line: scan for nearby devices, pair, connect, disconnect, and manage audio profiles. Use when the user needs to pair headphones/speakers, connect Bluetooth peripherals, troubleshoot Bluetooth connections, or automate Bluetooth tasks on Linux."
+metadata: {"nanobot":{"emoji":"🔵","os":["linux"],"requires":{"bins":["bluetoothctl"]}}}
 ---
 
-# Bluetooth Controller
+# Bluetooth Skill
 
-Unified Bluetooth-Skill fuer Android 11+ mit Root-Zugriff via Termux.
+Manage Bluetooth devices on Linux using `bluetoothctl` and related tools.
 
-## Wichtig
-
-- Alle Befehle brauchen **Root** (`su`)
-- Manche Aktionen (Discoverable, Pairing) erfordern **UI-Bestaetigung auf dem Bildschirm**
-- Scan oeffnet die Bluetooth-Einstellungen, die automatisch ein Discovery starten
-- Fuer vollautomatische Steuerung ohne UI: nur `enable`, `disable`, `status`, `bonded`, `connected` moeglich
-
-## Script
+## Quick Start
 
 ```bash
-# Status abfragen
-python3 skills/bluetooth/scripts/bluetooth.py status
+# Enter interactive bluetoothctl shell
+bluetoothctl
 
-# Bluetooth ein/ausschalten
-python3 skills/bluetooth/scripts/bluetooth.py enable
-python3 skills/bluetooth/scripts/bluetooth.py disable
-
-# Nach Geraeten scannen (Standard: 12 Sek.)
-python3 skills/bluetooth/scripts/bluetooth.py scan
-python3 skills/bluetooth/scripts/bluetooth.py scan 20
-
-# Gepaarte Geraete anzeigen
-python3 skills/bluetooth/scripts/bluetooth.py bonded
-
-# Aktuell verbundene Geraete
-python3 skills/bluetooth/scripts/bluetooth.py connected
-
-# Geraete-Info (Details zu einem bestimmten Geraet)
-python3 skills/bluetooth/scripts/bluetooth.py info AA:BB:CC:DD:EE:FF
-
-# Pairing starten (erfordert UI-Bestaetigung)
-python3 skills/bluetooth/scripts/bluetooth.py pair AA:BB:CC:DD:EE:FF
-
-# Pairing entfernen
-python3 skills/bluetooth/scripts/bluetooth.py unpair AA:BB:CC:DD:EE:FF
-
-# Mit Bluetooth-Lautsprecher/Kopfhoerer verbinden
-python3 skills/bluetooth/scripts/bluetooth.py connect AA:BB:CC:DD:EE:FF
-python3 skills/bluetooth/scripts/bluetooth.py connect AA:BB:CC:DD:EE:FF a2dp
-
-# Geraet trennen
-python3 skills/bluetooth/scripts/bluetooth.py disconnect AA:BB:CC:DD:EE:FF
-
-# Datei per Bluetooth senden (OPP)
-python3 skills/bluetooth/scripts/bluetooth.py send /pfad/zur/datei.pdf
-
-# Sichtbar machen (erfordert UI-Bestaetigung)
-python3 skills/bluetooth/scripts/bluetooth.py discoverable
-python3 skills/bluetooth/scripts/bluetooth.py discoverable 300
-
-# Audio-Routing anzeigen
-python3 skills/bluetooth/scripts/bluetooth.py audio
-
-# Geraetename aendern
-python3 skills/bluetooth/scripts/bluetooth.py set-name "MeinTablet"
+# Or run commands directly
+bluetoothctl show                     # Controller info
+bluetoothctl devices                  # List known devices
+bluetoothctl paired-devices           # List paired devices
 ```
 
-## Befehle
+## Scanning & Discovering Devices
 
-| Befehl        | Beschreibung                                 | UI noetig? |
-|---------------|----------------------------------------------|------------|
-| status        | Adapterstatus (Name, Adresse, Modus)         | Nein       |
-| enable        | Bluetooth einschalten                        | Nein       |
-| disable       | Bluetooth ausschalten                        | Nein       |
-| scan [sek]    | Geraete in der Naehe suchen                  | Nein*      |
-| bonded        | Gepaarte Geraete auflisten                   | Nein       |
-| connected     | Verbundene Geraete auflisten                 | Nein       |
-| info <mac>    | Detailinfos zu einem Geraet                  | Nein       |
-| pair <mac>    | Pairing starten                              | **Ja**     |
-| unpair <mac>  | Pairing entfernen                            | **Ja**     |
-| connect <mac> | Mit gepaartem Geraet verbinden               | **Ja**     |
-| disconnect    | Verbindung trennen                           | **Ja**     |
-| send <pfad>   | Datei per Bluetooth senden (OPP)             | **Ja**     |
-| discoverable  | Sichtbar machen                              | **Ja**     |
-| audio         | Audio-Routing-Infos                          | Nein       |
-| set-name      | Bluetooth-Name aendern                       | Nein       |
+```bash
+# Power on adapter and start scanning
+bluetoothctl power on
+bluetoothctl scan on
 
-*Scan oeffnet BT-Einstellungen im Hintergrund, braucht aber keine User-Interaktion.
+# Wait a few seconds, then list discovered devices
+bluetoothctl devices
 
-## Ausgabe
-
-Alle Befehle geben **JSON** zurueck. Beispiel:
-
-```json
-{
-  "enabled": true,
-  "name": "Galaxy Tab A",
-  "address": "58:C5:CB:E8:98:BE",
-  "scan_mode": "connectable",
-  "discovering": false,
-  "connection_state": "DISCONNECTED",
-  "profiles": ["A2dpService", "HeadsetService", "HidHostService"]
-}
+# Stop scan
+bluetoothctl scan off
 ```
 
-## Workflow: Datei an Handy senden
+## Pairing a Device
 
-1. `bluetooth.py status` → pruefen ob BT an
-2. `bluetooth.py enable` → falls aus, einschalten
-3. `bluetooth.py bonded` → pruefen ob Zielgeraet gepaart
-4. Falls nicht gepaart: `bluetooth.py scan` → Geraet finden,
-   dann `bluetooth.py pair <mac>` → User bestaetigt PIN
-5. `bluetooth.py send /pfad/zur/datei.pdf` → User waehlt Zielgeraet
+```bash
+# 1. Start scanning
+bluetoothctl scan on
 
-## Workflow: Bluetooth-Lautsprecher verbinden
+# 2. Note the device MAC address from scan output (e.g., AA:BB:CC:DD:EE:FF)
+# 3. Pair
+bluetoothctl pair AA:BB:CC:DD:EE:FF
 
-1. `bluetooth.py status` → pruefen ob BT an
-2. `bluetooth.py enable` → falls noetig
-3. `bluetooth.py bonded` → Lautsprecher suchen
-4. Falls nicht gepaart: `bluetooth.py scan` → Lautsprecher suchen und dann pairen
-5. `bluetooth.py connect <mac>` → Audio-Verbindung herstellen
-6. `bluetooth.py audio` → Pruefen ob Audio geroutet wird
+# 4. Trust (auto-connect in future)
+bluetoothctl trust AA:BB:CC:DD:EE:FF
 
-## Einschraenkungen
+# 5. Connect
+bluetoothctl connect AA:BB:CC:DD:EE:FF
+```
 
-- Kein `bluetoothctl` oder `hcitool` verfuegbar (Android, kein BlueZ)
-- Dateiempfang (OPP receive) kann nicht programmatisch gestartet werden —
-  eingehende Dateien erscheinen in der Android-Benachrichtigungsleiste
-- Discoverable erfordert User-Bestaetigung auf dem Bildschirm
-- Pairing erfordert PIN-Bestaetigung auf beiden Geraeten
+## Managing Connections
+
+```bash
+bluetoothctl connect AA:BB:CC:DD:EE:FF     # Connect to device
+bluetoothctl disconnect AA:BB:CC:DD:EE:FF  # Disconnect
+bluetoothctl remove AA:BB:CC:DD:EE:FF      # Unpair/remove device
+bluetoothctl block AA:BB:CC:DD:EE:FF       # Block device
+bluetoothctl unblock AA:BB:CC:DD:EE:FF     # Unblock device
+```
+
+## Audio Devices (via PulseAudio / PipeWire)
+
+After connecting a Bluetooth audio device:
+
+```bash
+# List audio sinks (PulseAudio)
+pactl list sinks short
+
+# Set Bluetooth headphones as default sink
+pactl set-default-sink bluez_sink.AA_BB_CC_DD_EE_FF.a2dp_sink
+
+# Switch active app to Bluetooth output
+pactl list sink-inputs short
+pactl move-sink-input <INPUT_ID> bluez_sink.AA_BB_CC_DD_EE_FF.a2dp_sink
+
+# PipeWire: use wpctl
+wpctl status
+wpctl set-default <SINK_ID>
+```
+
+## Auto-Connect Script
+
+```bash
+#!/usr/bin/env bash
+# auto-connect-bt.sh — connect to trusted device if in range
+DEVICE_MAC="AA:BB:CC:DD:EE:FF"
+
+bluetoothctl power on
+
+# Scan briefly
+bluetoothctl scan on &
+SCAN_PID=$!
+sleep 5
+kill $SCAN_PID 2>/dev/null
+
+# Attempt connection
+if bluetoothctl connect "$DEVICE_MAC" 2>&1 | grep -q "Connection successful"; then
+    echo "Connected to $DEVICE_MAC"
+else
+    echo "Device not in range or connection failed"
+fi
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Adapter not found | `hciconfig hci0 up` or check `rfkill list` |
+| Device blocked | `rfkill unblock bluetooth` |
+| Pairing fails | Run `bluetoothctl agent on` before pairing |
+| Audio cuts out | Switch profile: `pactl set-card-profile bluez_card... a2dp_sink` |
+| Device shows but won't connect | `bluetoothctl remove <MAC>` then re-pair |
+| Service not running | `sudo systemctl start bluetooth` |
+
+## Device Info
+
+```bash
+# Detailed info about a device
+bluetoothctl info AA:BB:CC:DD:EE:FF
+
+# Controller details
+bluetoothctl show
+
+# List all adapters
+hciconfig -a
+```
