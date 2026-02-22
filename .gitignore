@@ -42,5 +42,10 @@ tasks/
 .vscode/
 .idea/
 
+# Python build artifacts
+__pycache__/
+*.pyc
+*.py.bak
+
 # Added by goreleaser init:
 dist/

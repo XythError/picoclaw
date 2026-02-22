@@ -49,7 +49,7 @@ WATCHDOG_ERROR_LOG = os.path.join(DASHBOARD_DIR, "watchdog-error.log")
 WATCHDOG_STATE = os.path.join(DASHBOARD_DIR, "watchdog-state.json")
 WATCHDOG_LOCK = os.path.join(DASHBOARD_DIR, "watchdog.lock")
 WATCHDOG_CRON_LOG = os.path.join(DASHBOARD_DIR, "watchdog-cron.log")
-PYTHON_BIN = os.environ.get("PYTHON_BIN", "/data/data/com.termux/files/usr/bin/python3")
+PYTHON_BIN = os.environ.get("PYTHON_BIN", sys.executable or "python3")
 
 # Max Restart Attempts in 10 Minuten (um Crash-Loops zu vermeiden)
 MAX_RESTARTS_PER_WINDOW = 5
