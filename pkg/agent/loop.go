@@ -138,6 +138,13 @@ func registerSharedTools(
 		// Spawn tool with allowlist checker
 		subagentManager := tools.NewSubagentManager(provider, agent.Model, agent.Workspace, msgBus)
 		subagentManager.SetLLMOptions(agent.MaxTokens, agent.Temperature)
+		// Provide a minimal system prompt for subagents (no skills/memory/bootstrap files)
+		// This mirrors openclaw's "minimal" prompt mode for spawned sub-agents.
+		subagentContextBuilder := NewContextBuilder(agent.Workspace)
+		subagentContextBuilder.SetPromptMode(PromptModeMinimal)
+		subagentManager.SetSystemPromptBuilder(func() string {
+			return subagentContextBuilder.BuildSystemPrompt()
+		})
 		spawnTool := tools.NewSpawnTool(subagentManager)
 		currentAgentID := agentID
 		spawnTool.SetAllowlistChecker(func(targetAgentID string) bool {
@@ -430,7 +437,16 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	// If last tool had ForUser content and we already sent it, we might not need to send final response
 	// This is controlled by the tool's Silent flag and ForUser content
 
-	// 5. Handle empty response
+	// 5. Handle silent reply token: when the agent has nothing to say it responds
+	// with SilentReplyToken (mirrors openclaw's SILENT_REPLY_TOKEN behaviour).
+	// Treat this as an empty response so no message is published to the user.
+	if strings.TrimSpace(finalContent) == SilentReplyToken {
+		logger.InfoCF("agent", "Silent reply token received, suppressing outbound message",
+			map[string]any{"agent_id": agent.ID, "session_key": opts.SessionKey})
+		finalContent = ""
+	}
+
+	// 6. Handle empty response
 	if finalContent == "" {
 		finalContent = opts.DefaultResponse
 	}

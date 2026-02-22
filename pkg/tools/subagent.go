@@ -23,19 +23,20 @@ type SubagentTask struct {
 }
 
 type SubagentManager struct {
-	tasks          map[string]*SubagentTask
-	mu             sync.RWMutex
-	provider       providers.LLMProvider
-	defaultModel   string
-	bus            *bus.MessageBus
-	workspace      string
-	tools          *ToolRegistry
-	maxIterations  int
-	maxTokens      int
-	temperature    float64
-	hasMaxTokens   bool
-	hasTemperature bool
-	nextID         int
+	tasks               map[string]*SubagentTask
+	mu                  sync.RWMutex
+	provider            providers.LLMProvider
+	defaultModel        string
+	bus                 *bus.MessageBus
+	workspace           string
+	tools               *ToolRegistry
+	maxIterations       int
+	maxTokens           int
+	temperature         float64
+	hasMaxTokens        bool
+	hasTemperature      bool
+	nextID              int
+	systemPromptBuilder func() string // Optional: builds the subagent system prompt
 }
 
 func NewSubagentManager(
@@ -55,7 +56,24 @@ func NewSubagentManager(
 	}
 }
 
-// SetLLMOptions sets max tokens and temperature for subagent LLM calls.
+// SetSystemPromptBuilder sets a function that returns the system prompt for subagents.
+// When set, this replaces the default hardcoded subagent prompt.
+// This is typically set by the agent package using ContextBuilder with PromptModeMinimal.
+func (sm *SubagentManager) SetSystemPromptBuilder(builder func() string) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.systemPromptBuilder = builder
+}
+
+// buildSystemPrompt returns the system prompt for a subagent task.
+func (sm *SubagentManager) buildSystemPrompt() string {
+	if sm.systemPromptBuilder != nil {
+		return sm.systemPromptBuilder()
+	}
+	return `You are a subagent. Complete the given task independently and report the result.
+You have access to tools - use them as needed to complete your task.
+After completing the task, provide a clear summary of what was done.`
+}
 func (sm *SubagentManager) SetLLMOptions(maxTokens int, temperature float64) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -117,9 +135,7 @@ func (sm *SubagentManager) runTask(ctx context.Context, task *SubagentTask, call
 	task.Created = time.Now().UnixMilli()
 
 	// Build system prompt for subagent
-	systemPrompt := `You are a subagent. Complete the given task independently and report the result.
-You have access to tools - use them as needed to complete your task.
-After completing the task, provide a clear summary of what was done.`
+	systemPrompt := sm.buildSystemPrompt()
 
 	messages := []providers.Message{
 		{
